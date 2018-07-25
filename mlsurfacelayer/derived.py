@@ -2,7 +2,8 @@
 
 def potential_temperature(temperature_k, pressure_hpa, pressure_reference_hpa=1000.0):
     """
-    Convert temperature to potential temperature based on the available pressure.
+    Convert temperature to potential temperature based on the available pressure. Potential temperature is at a
+    reference pressure of 1000 mb.
 
     Args:
         temperature_k: The air temperature in units K
