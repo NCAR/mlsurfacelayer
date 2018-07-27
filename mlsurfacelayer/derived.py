@@ -1,8 +1,20 @@
+import numpy as np
 
+def celsius_to_kelvin(temperature_c):
+    return temperature_c + 273.15
+
+
+def wind_components(wind_speed_m_s, wind_direction_degrees):
+    math_dir = 270 - wind_direction_degrees
+    math_dir[math_dir < 0] = 360 + math_dir[math_dir < 0]
+    u = wind_speed_m_s * np.cos(np.radians(math_dir))
+    v = wind_speed_m_s * np.sin(np.radians(math_dir))
+    return u, v
 
 def potential_temperature(temperature_k, pressure_hpa, pressure_reference_hpa=1000.0):
     """
-    Convert temperature to potential temperature based on the available pressure.
+    Convert temperature to potential temperature based on the available pressure. Potential temperature is at a
+    reference pressure of 1000 mb.
 
     Args:
         temperature_k: The air temperature in units K
@@ -16,7 +28,7 @@ def potential_temperature(temperature_k, pressure_hpa, pressure_reference_hpa=10
     return temperature_k * (pressure_reference_hpa / pressure_hpa) ** (2.0 / 7.0)
 
 
-def virtual_temperature(temperature_k, mixing_ratio_kg_kg):
+def virtual_temperature(temperature_k, mixing_ratio_g_kg):
     """
     Convert temperature and mixing ratio to virtual temperature.
 
@@ -27,7 +39,7 @@ def virtual_temperature(temperature_k, mixing_ratio_kg_kg):
     Returns:
         The virtual temperature in units K.
     """
-    return temperature_k * (1 + 0.61 * mixing_ratio_kg_kg)
+    return temperature_k * (1 + 0.61 * mixing_ratio_g_kg / 1000.0)
 
 
 def air_density(virtual_temperature_k, pressure_hPa):
@@ -70,14 +82,14 @@ def moisture_scale(latent_heat_flux_W_m2, air_density_kg_m3, friction_velocity_m
         friction_velocity_m_s: The friction velocity (u*) in units m s-1
 
     Returns:
-        The turbulent moisture scale factor in kg kg-1
+        The turbulent moisture scale factor in g kg-1
     """
     latent_heat_of_vaporization_J_kg = 2264705.0  # J kg-1
-    return latent_heat_flux_W_m2 / (latent_heat_of_vaporization_J_kg * air_density_kg_m3 * friction_velocity_m_s)
+    return latent_heat_flux_W_m2 / (latent_heat_of_vaporization_J_kg * air_density_kg_m3 * friction_velocity_m_s) * 1000
 
 
 def bulk_richardson_number(potential_temperature_k, height,
-                           mixing_ratio_kg_kg, virtual_potential_skin_temperature_k, wind_speed_m_s):
+                           mixing_ratio_g_kg, virtual_potential_skin_temperature_k, wind_speed_m_s):
     """
     Calculate the bulk Richardson number, a measure of stability.
 
@@ -92,7 +104,7 @@ def bulk_richardson_number(potential_temperature_k, height,
 
     """
     g = 9.81  # m s-2
-    virtual_potential_temperature_k = virtual_temperature(potential_temperature_k, mixing_ratio_kg_kg)
+    virtual_potential_temperature_k = virtual_temperature(potential_temperature_k, mixing_ratio_g_kg)
     return g / potential_temperature_k * height * (virtual_potential_temperature_k
                                                    - virtual_potential_skin_temperature_k) / wind_speed_m_s ** 2
 
