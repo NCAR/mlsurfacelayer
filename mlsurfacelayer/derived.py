@@ -57,7 +57,7 @@ def air_density(virtual_temperature_k, pressure_hPa):
     return pressure_hPa * 100.0 / (gas_constant * virtual_temperature_k)
 
 
-def temperature_scale(sensible_heat_flux_W_m2, air_density_kg_m3, friction_velocity_m_s):
+def temperature_scale(sensible_heat_flux_W_m2, air_density_kg_m3, friction_velocity_m_s, min_friction_velocity=0.001):
     """
     Caclulate the temperature turbulence scale value theta* from the sensible heat flux.
 
@@ -69,10 +69,12 @@ def temperature_scale(sensible_heat_flux_W_m2, air_density_kg_m3, friction_veloc
     Returns:
         The temperature turbulence scale value in units K.
     """
-    return -sensible_heat_flux_W_m2 / (air_density_kg_m3 * 287.0 * 7.0 / 2.0 * friction_velocity_m_s)
+
+    return -sensible_heat_flux_W_m2 / (air_density_kg_m3 * 287.0 * 7.0 / 2.0
+                                       * np.maximum(friction_velocity_m_s, min_friction_velocity))
 
 
-def moisture_scale(latent_heat_flux_W_m2, air_density_kg_m3, friction_velocity_m_s):
+def moisture_scale(latent_heat_flux_W_m2, air_density_kg_m3, friction_velocity_m_s, min_friction_velocity=0.001):
     """
     Calculate the turblulent moisture scale factor from the latent heat flux.
 
@@ -85,11 +87,13 @@ def moisture_scale(latent_heat_flux_W_m2, air_density_kg_m3, friction_velocity_m
         The turbulent moisture scale factor in g kg-1
     """
     latent_heat_of_vaporization_J_kg = 2264705.0  # J kg-1
-    return latent_heat_flux_W_m2 / (latent_heat_of_vaporization_J_kg * air_density_kg_m3 * friction_velocity_m_s) * 1000
+    return latent_heat_flux_W_m2 / (latent_heat_of_vaporization_J_kg * air_density_kg_m3
+                                    * np.maximum(friction_velocity_m_s, min_friction_velocity)) * 1000
 
 
 def bulk_richardson_number(potential_temperature_k, height,
-                           mixing_ratio_g_kg, virtual_potential_skin_temperature_k, wind_speed_m_s):
+                           mixing_ratio_g_kg, virtual_potential_skin_temperature_k, wind_speed_m_s,
+                           minimum_wind_speed=0.001):
     """
     Calculate the bulk Richardson number, a measure of stability.
 
@@ -106,7 +110,8 @@ def bulk_richardson_number(potential_temperature_k, height,
     g = 9.81  # m s-2
     virtual_potential_temperature_k = virtual_temperature(potential_temperature_k, mixing_ratio_g_kg)
     return g / potential_temperature_k * height * (virtual_potential_temperature_k
-                                                   - virtual_potential_skin_temperature_k) / wind_speed_m_s ** 2
+                                                   - virtual_potential_skin_temperature_k) / \
+           np.maximum(wind_speed_m_s ** 2, minimum_wind_speed ** 2)
 
 
 def obukhov_length(potential_temperature_k, temperature_scale_k, friction_velocity_m_s, von_karman_constant=0.4):
