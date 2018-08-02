@@ -35,7 +35,7 @@ def process_cabauw_data(csv_path, out_file, nan_column=("soil", "TS00")):
                        "wind direction_10 m_m s-1",
                        "u wind_10 m_m s-1",
                        "v wind_10 m_m s-1",
-                       "mixing_ratio_2 m_g kg-1",
+                       "mixing ratio_2 m_g kg-1",
                        "temperature_0 m_K",
                        "potential temperature_0 m_K",
                        "virtual potential temperature_0 m_K",
