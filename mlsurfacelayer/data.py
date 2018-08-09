@@ -68,7 +68,7 @@ def process_cabauw_data(csv_path, out_file, nan_column=("soil", "TS00")):
                                                                         derived_data["pressure_2 m_hPa"])
     derived_data["virtual potential temperature_0 m_K"] = virtual_temperature(derived_data["potential temperature_0 m_K"],
                                                                               derived_data["mixing ratio_2 m_g kg-1"])
-    derived_data["friction velocity_surface_K"] = combined_data[("flux", "UST")]
+    derived_data["friction velocity_surface_m s-1"] = combined_data[("flux", "UST")]
     derived_data["temperature scale_surface_K"] = temperature_scale(combined_data[("flux", "H")],
                                                                     derived_data["air density_10 m_kg m-3"],
                                                                     derived_data["friction velocity_surface_K"])
