@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def celsius_to_kelvin(temperature_c):
     return temperature_c + 273.15
 
@@ -10,6 +11,7 @@ def wind_components(wind_speed_m_s, wind_direction_degrees):
     u = wind_speed_m_s * np.cos(np.radians(math_dir))
     v = wind_speed_m_s * np.sin(np.radians(math_dir))
     return u, v
+
 
 def potential_temperature(temperature_k, pressure_hpa, pressure_reference_hpa=1000.0):
     """
