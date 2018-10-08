@@ -5,22 +5,27 @@ from .derived import *
 from pvlib.solarposition import get_solarposition
 
 
-def process_cabauw_data(csv_path, out_file, nan_column=("soil_water", "TH03")):
+def process_cabauw_data(csv_path, out_file, nan_column=("soil_water", "TH03"), cabauw_lat=51.971, cabauw_lon=4.926,
+                        elevation=-0.7):
     """
     This function loads all of the cabauw data files and then calculates the relevant derived quantities necessary
     to build the machine learning parameterization.
+
+    Columns in derived data show follow the following convention "name of variable_level_units". Underscores separate
+    different components, and spaces separate words in each subsection. `df.columns.str.split("_").str[0]` extracts
+    the variable names, `df.columns.str.split("_").str[1]` extracts levels, and `df.columns.str.split("_").str[0]`
+    extracts units.
 
     Args:
         csv_path: Path to all csv files.
         out_file: Where derived data are written to.
         nan_column: Column used to filter bad examples.
-
+        cabauw_lat: Latitude of tower site in degrees.
+        cabauw_lon: Longitude of tower site in degrees.
+        elevation: Elevation of site in meters.
     Returns:
         `pandas.DataFrame` containing derived data.
     """
-    cabauw_lat = 51.971
-    cabauw_lon = 4.926
-    elevation = -0.7
     csv_files = sorted(glob(join(csv_path, "*.csv")))
     file_types = ["_".join(csv_file.split("/")[-1].split("_")[1:-1]) for csv_file in csv_files]
     data = dict()
@@ -31,6 +36,7 @@ def process_cabauw_data(csv_path, out_file, nan_column=("soil_water", "TH03")):
     print("combine data")
     combined_data = pd.concat(data, axis=1, join="inner")
     combined_data = combined_data.loc[~pd.isna(combined_data[nan_column])]
+    # List of columns included in data
     derived_columns = ["global horizontal irradiance_0 m_W m-2",
                        "zenith_0 m_degrees",
                        "azimuth_0 m_degrees",
@@ -56,20 +62,20 @@ def process_cabauw_data(csv_path, out_file, nan_column=("soil_water", "TH03")):
                        "u wind_40 m_m s-1",
                        "v wind_40 m_m s-1",
                        "mixing ratio_2 m_g kg-1",
-                       "virtual potential temperature_10 m_K",
+                       "virtual potential temperature_2 m_K",
                        "relative humidity_2 m_%",
                        "soil temperature_0 cm_K",
                        "soil temperature_4 cm_K",
-                       "soil temperature_6 cm_K",
                        "soil potential temperature_0 cm_K",
                        "soil potential temperature_4 cm_K",
-                       "soil potential temperature_6 cm_K",
                        "soil water content_3 cm_m3 m-3",
                        "soil water content_8 cm_m3 m-3",
-                       "friction velocity_surface_K",
+                       "friction velocity_surface_m s-1",
                        "temperature scale_surface_K",
                        "moisture scale_surface_g kg-1",
-                       "bulk richardson_surface_",
+                       "bulk richardson_10 m_",
+                       "bulk richardson_2 m_",
+                       "bulk richardson_10-2 m_",
                        "obukhov length_surface_m"
                        ]
     derived_data = pd.DataFrame(index=combined_data.index, columns=derived_columns, dtype=float)
@@ -86,6 +92,7 @@ def process_cabauw_data(csv_path, out_file, nan_column=("soil_water", "TH03")):
     derived_data["potential temperature_2 m_K"] = potential_temperature(derived_data["temperature_2 m_K"],
                                                                          derived_data["pressure_2 m_hPa"])
     derived_data["mixing ratio_10 m_g kg-1"] = combined_data[("tower", "Q_10m")]
+    derived_data["mixing ratio_2 m_g kg-1"] = combined_data[("tower", "Q_2m")]
     derived_data["relative humidity_10 m_%"] = combined_data[("tower", "RH_10m")]
     derived_data["relative humidity_2 m_%"] = combined_data[("tower", "RH_2m")]
     derived_data["virtual potential temperature_10 m_K"] = virtual_temperature(
@@ -101,25 +108,21 @@ def process_cabauw_data(csv_path, out_file, nan_column=("soil_water", "TH03")):
         derived_data["u wind_{0:d} m_m s-1".format(height)], derived_data["v wind_{0:d} m_m s-1".format(height)] = \
             wind_components(derived_data["wind speed_{0:d} m_m s-1".format(height)],
                             derived_data["wind direction_{0:d} m_m s-1".format(height)])
-    derived_data["mixing ratio_2 m_g kg-1"] = combined_data[("tower", "Q_2m")]
     derived_data["soil temperature_0 cm_K"] = celsius_to_kelvin(combined_data[("soil", "TS00")])
     derived_data["soil temperature_4 cm_K"] = celsius_to_kelvin(combined_data[("soil", "TS04")])
-    derived_data["soil temperature_6 cm_K"] = celsius_to_kelvin(combined_data[("soil", "TS06")])
-    derived_data["soil potential temperature_0 m_K"] = potential_temperature(derived_data["soil temperature_0 cm_K"],
+    derived_data["soil potential temperature_0 cm_K"] = potential_temperature(derived_data["soil temperature_0 cm_K"],
                                                                              derived_data["pressure_2 m_hPa"])
-    derived_data["soil potential temperature_0 m_K"] = potential_temperature(derived_data["soil temperature_4 cm_K"],
-                                                                             derived_data["pressure_2 m_hPa"])
-    derived_data["soil potential temperature_0 m_K"] = potential_temperature(derived_data["soil temperature_6 cm_K"],
+    derived_data["soil potential temperature_4 cm_K"] = potential_temperature(derived_data["soil temperature_4 cm_K"],
                                                                              derived_data["pressure_2 m_hPa"])
     derived_data["soil water content_3 cm_m3 m-3"] = combined_data[("soil_water", "TH03")]
     derived_data["soil water content_8 cm_m3 m-3"] = combined_data[("soil_water", "TH08")]
-    derived_data["friction velocity_surface_m s-1"] = combined_data[("flux", "UST")]
+    derived_data["friction velocity_surface_m s-1"] = np.maximum(combined_data[("flux", "UST")], 0.001)
     derived_data["temperature scale_surface_K"] = temperature_scale(combined_data[("flux", "H")],
                                                                     derived_data["air density_10 m_kg m-3"],
-                                                                    derived_data["friction velocity_surface_K"])
+                                                                    derived_data["friction velocity_surface_m s-1"])
     derived_data["moisture scale_surface_g kg-1"] = moisture_scale(combined_data[("flux", "LE")],
                                                                    derived_data["air density_10 m_kg m-3"],
-                                                                   derived_data["friction velocity_surface_K"])
+                                                                   derived_data["friction velocity_surface_m s-1"])
     derived_data["bulk richardson_10 m_"] = bulk_richardson_number(derived_data["potential temperature_10 m_K"],
                                                                    10,
                                                                    derived_data["mixing ratio_10 m_g kg-1"],
@@ -130,9 +133,14 @@ def process_cabauw_data(csv_path, out_file, nan_column=("soil_water", "TH03")):
                                                                   derived_data["mixing ratio_2 m_g kg-1"],
                                                                   derived_data["soil potential temperature_4 cm_K"],
                                                                   derived_data["wind speed_10 m_m s-1"])
+    derived_data["bulk richardson_10-2 m_"] = bulk_richardson_number(derived_data["potential temperature_10 m_K"],
+                                                                     10,
+                                                                     derived_data["mixing ratio_10 m_g kg-1"],
+                                                                     derived_data["virtual potential temperature_2 m_K"],
+                                                                     derived_data["wind speed_10 m_m s-1"])
     derived_data["obukhov length_surface_m"] = obukhov_length(derived_data["potential temperature_10 m_K"],
                                                               derived_data["temperature scale_surface_K"],
-                                                              derived_data["friction velocity_surface_K"])
+                                                              derived_data["friction velocity_surface_m s-1"])
     derived_data.to_csv(out_file, index_label="Time")
     return derived_data
 

@@ -12,8 +12,9 @@ import scipy
 from math import *
 import sys
 import matplotlib.pyplot as plt
+from numba import jit
 
-
+@jit(nopython=True)
 def mo_similarity(u10,v10,tsk,t2,qsfc,q2,psfc,z0,zt0):
     # u10 - 10 m level zonal wind speed [m/s]
     # v10 - 10 m level meridional wind speed [m/s]
@@ -33,8 +34,8 @@ def mo_similarity(u10,v10,tsk,t2,qsfc,q2,psfc,z0,zt0):
         z10oz0 = z10/z0
         z2oz0  = z2/z0
         z2ozt0 = z2/zt0
-    else:
-        sys.exit("Surface roughnes, z0, must be greter than 0.!")
+    #else:
+    #    sys.exit("Surface roughnes, z0, must be greter than 0.!")
     #
     # Gravitational acceleration
     g = 9.81
@@ -77,8 +78,8 @@ def mo_similarity(u10,v10,tsk,t2,qsfc,q2,psfc,z0,zt0):
     tauxz = cd*sqrt(u10*u10+v10*v10)*u10
     tauyz = cd*sqrt(u10*u10+v10*v10)*v10
     ustar = (tauxz**2+tauyz**2)**0.25
-    tstar = ch/ustar*sqrt(u10*u10+v10*v10)*(th0-th2)
-    wthv0 = ustar*tstar
+    tstar = -ch/ustar*sqrt(u10*u10+v10*v10)*(th0-th2)
+    wthv0 = -ustar*tstar
     #
     # Set stopping criterion
     diff = 1.
@@ -98,8 +99,8 @@ def mo_similarity(u10,v10,tsk,t2,qsfc,q2,psfc,z0,zt0):
         tauyz = cd*sqrt(u10*u10+v10*v10)*v10
         ustar = (tauxz**2+tauyz**2)**0.25
         wspd2 = ustar/karman*(log(z2oz0)-psim2)
-        tstar = ch/ustar*sqrt(u10*u10+v10*v10)*(thv0-thv2)
-        wthv0 = ustar*tstar
+        tstar = -ch/ustar*sqrt(u10*u10+v10*v10)*(thv0-thv2)
+        wthv0 = -ustar*tstar
         #
         # Compute drag coefficients
         cdold = cd
@@ -126,8 +127,8 @@ def mo_similarity(u10,v10,tsk,t2,qsfc,q2,psfc,z0,zt0):
             olength = -ustar**3/(karman*g/t0*wthv0)
             #
             # Free convection
-            if (olength == 0.):
-                sys.exit("Free convection!")
+            #if (olength == 0.):
+            #    sys.exit("Free convection!")
             #
             # Monin-Obukhov stability parameter
             zeta10 = z10/olength
@@ -198,6 +199,7 @@ phim=[]
 zolm=[]
 phih=[]
 zolh=[]
+ts = []
 #
 for tsk in np.arange(289.,300.,0.01):
     ustar,tstar,wthv0,zeta10,phim10,zeta2,phih2 = \
@@ -209,6 +211,7 @@ for tsk in np.arange(289.,300.,0.01):
     zolm.append(zeta10)
     phih.append(phih2)
     zolh.append(zeta2)
+    ts.append(tstar)
     #
     print("ustar = ",ustar,"  tstar = ",tstar," wthv0 = ",wthv0)
 #
@@ -219,5 +222,7 @@ plt.show()
 q=plt.plot(zolh,phih,'ro')
 plt.xlabel("z/L")
 plt.ylabel("$\Phi_h$")
+plt.show()
+w = plt.plot(zolh, ts)
 plt.show()
 
