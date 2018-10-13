@@ -10,6 +10,7 @@ if __name__ == "__main__":
           url="https://github.com/NCAR/mlsurfacelayer",
           packages=["mlsurfacelayer"],
           install_requires=["numpy",
+                            "numba",
                             "scipy",
                             "pandas",
                             "scikit-learn",
