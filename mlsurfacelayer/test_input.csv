@@ -1,0 +1,2 @@
+global horizontal irradiance_0 m_W m-2,zenith_0 m_degrees,azimuth_0 m_degrees,pressure_2 m_hPa,potential temperature_10 m_K,potential temperature_2 m_K,mixing ratio_10 m_g kg-1,relative humidity_10 m_%,air density_10 m_kg m-3,wind speed_10 m_m s-1,wind speed_20 m_m s-1,wind speed_40 m_m s-1,mixing ratio_2 m_g kg-1,relative humidity_2 m_%,bulk richardson_10-2 m_
+254.53656,60.08674861630333,193.61699917177899,1008.7,282.8490917514725,283.04859737076464,5.9540486,76.71118,1.2350256731731624,0.94,0.94,0.9259407,6.1146,77.81882,-0.07905978963975449
