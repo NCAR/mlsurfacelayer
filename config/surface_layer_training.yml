@@ -1,0 +1,5 @@
+data_file: "cabauw_derived_data_20190226.csv"
+input_columns:
+  friction_velocity: ["wind speed_10 m_m s-1"]
+  temperature_scale: []
+  moisture_scale: []
