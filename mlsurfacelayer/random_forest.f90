@@ -44,12 +44,12 @@ module random_forest
     end subroutine load_decision_tree
 
     subroutine load_random_forest(file_path, random_forest_array)
-        character(len=200), intent(in) :: file_path
-        character(len=200), allocatable :: filenames(:)
+        character(len=*), intent(in) :: file_path
+        character(len=300), allocatable :: filenames(:)
         type(decision_tree), allocatable, intent(out) :: random_forest_array(:)
         integer :: num_trees, n, stat
-        character(len=200) :: command_start
-        character(len=200) :: command
+        character(len=6 + len_trim(file_path)) :: command_start
+        character(len=len_trim(file_path) + 35) :: command
         command_start = "ls -1 " // trim(file_path) 
         command = trim(command_start) // "*_tree_*.csv > tree_files.txt"
         print *, command
