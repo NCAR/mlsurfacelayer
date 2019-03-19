@@ -206,7 +206,7 @@ def saturation_vapor_pressure(temperature_K):
     Returns:
         saturation vapor pressure in hPa
     """
-    Rv = 287.0
+    Rv = 461.0
     T0 = 273.0
     es0 = 6.11
     L = 2.5e6

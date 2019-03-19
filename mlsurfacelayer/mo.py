@@ -2,8 +2,8 @@ from math import log, atan, sqrt
 import numpy as np
 from numba import jit
 
-@jit(nopython=True)
-def mo_similarity(u10, v10, tsk, t2, qsfc, q2, psfc, z0=0.1, zt0=2, z10=10.0, z2=10.0):
+#@jit(nopython=True)
+def mo_similarity(u10, v10, tsk, t2, qsfc, q2, psfc, mavail=1, z0=0.01, zt0=0.001, z10=10.0, z2=2.0):
     """
     Calculate flux information based on Monin-Obukhov similarity theory.
 
@@ -12,9 +12,9 @@ def mo_similarity(u10, v10, tsk, t2, qsfc, q2, psfc, z0=0.1, zt0=2, z10=10.0, z2
         v10: 10 m level meridional wind speed [m/s]
         tsk: surface skin temperature [K]
         t2: 2 m level temperature [K]
-        qsfc: ground mixing ratio
-        q2: 2 m level mixing ratio
-        psfc: surface pressure
+        qsfc: ground mixing ratio [kg /kg]
+        q2: 2 m level mixing ratio [kg / kg]
+        psfc: surface pressure [hPa]
         z0: momentum roughness length
         zt0: heat flux roughness length
         z10: Height of "10 m" layer
@@ -84,7 +84,8 @@ def mo_similarity(u10, v10, tsk, t2, qsfc, q2, psfc, z0=0.1, zt0=2, z10=10.0, z2
     tauyz = cd * wind_speed * v10
     ustar = (tauxz ** 2 + tauyz ** 2) ** 0.25
 
-    tstar = -ch / ustar * wind_speed * (th0 - th2)
+    tstar = -ch / ustar * wind_speed * (thv0 - thv2)
+    qstar = cq / ustar * mavail * wind_speed * (qsfc - q2)
     wthv0 = -ustar * tstar
     #
     # Set stopping criterion
@@ -110,7 +111,8 @@ def mo_similarity(u10, v10, tsk, t2, qsfc, q2, psfc, z0=0.1, zt0=2, z10=10.0, z2
         if ustar < 0.01:
             ustar = 0.01
         wspd2 = ustar / karman * (log(z2oz0) - psim2)
-        tstar = -ch / ustar * wind_speed * (thv0 - thv2)
+        tstar = -ch / ustar * wspd2 * (thv0 - thv2)
+        qstar = cq / ustar * mavail * wspd2 * (qsfc - q2)
         wthv0 = -ustar * tstar
         #
         # Compute drag coefficients
@@ -181,9 +183,9 @@ def mo_similarity(u10, v10, tsk, t2, qsfc, q2, psfc, z0=0.1, zt0=2, z10=10.0, z2
             #
             cd = karman ** 2 / ((log(z10oz0) - psim10) ** 2)
             ch = karman ** 2 / ((log(z2ozt0) - psim2) * (log(z2ozt0) - psih2))
-            cq = karman ** 2 / ((log(z2ozt0) - psim2) * (log(z2ozt0) - psiq2))
+            cq = karman ** 2 / ((log(z2oz0) - psim2) * (log(z2oz0) - psiq2))
         #
         diff = abs(cd - cdold) + abs(ch - chold) + abs(cq - cqold)
         count += 1
     #
-    return ustar, tstar, wthv0, zeta10, phim10, zeta2, phih2
+    return ustar, tstar, qstar, wthv0, zeta10, phim10, zeta2, phih2
