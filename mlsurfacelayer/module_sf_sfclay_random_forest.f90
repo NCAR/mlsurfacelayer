@@ -29,7 +29,7 @@ contains
             u_3d, v_3d, t_3d, qv_3d, p_3d, dz_3d, mavail, &
             xland, tsk, psfc, swdown, coszen, &
             rf_sfc, &
-            regime, br, ust, znt, zol, mol, &
+            regime, psim, psih, fm, fh, br, ust, znt, zol, mol, &
             rmol, hfx, qfx, lh, &
             qstar, u10, v10, th2, t2, q2, qgh, qsfc, &
             chs, chs2, cqs2, flhc, flqc, &
@@ -59,6 +59,9 @@ contains
         !
         ! Output fields:
         !   regime (real): The stability regime
+        !   psim (real): stability function for momentum
+        !   psih (real): stability function for sensible heat
+        !   fm (real):
         !   br (real): Bulk richardson number
         !   ust (real): friction velocity in m s-1
         !   hfx (real):
@@ -86,7 +89,7 @@ contains
 
         real, dimension(ims:ime, jms:jme), &
                 intent(inout) :: regime, br, ust, znt, zol, hfx, qfx, lh, mol, rmol, &
-                chs, chs2, cqs2, flhc, flqc
+                chs, chs2, cqs2, flhc, flqc, psim, psih, fm, fh
 
         real, dimension(ims:ime, jms:jme), &
                 intent(out) :: qstar, u10, v10, th2, t2, q2, qgh, qsfc, ck, cka, cd, cda
@@ -99,12 +102,11 @@ contains
 
         real, dimension(its:ite) :: p_1d
 
-
-        integer :: i, j, k
-
+        integer :: i, j, k, kstop
+        kstop = kts + n_vertical_layers
         do j = jts, jte
             do i = its, ite
-                do k = kts, kts + n_vertical_layers
+                do k = kts, kstop
                     u_2d(i, k) = u_3d(i, k, j)
                     v_2d(i, k) = v_3d(i, k, j)
                     qv_2d(i, k) = qv_3d(i, k, j)
@@ -112,28 +114,32 @@ contains
                     dz_2d(i, k) = dz_3d(i, k, j)
                 end do
                 p_1d(i) = p_3d(i, kts, j)
-            enddo
-            call sfclay_random_forest_2d(its, ite, kts, kts + n_vertical_layers, rf_sfc, &
+            end do
+            print*, "J", j
+            call sfclay_random_forest_2d(its, ite, kts, kstop, rf_sfc, &
                     u_2d, v_2d, qv_2d, t_2d, dz_2d, p_1d, &
                     mavail(its:ite, j), xland(its:ite, j), tsk(its:ite, j), psfc(its:ite, j), &
                     swdown(its:ite, j), coszen(its:ite, j), &
                     regime(its:ite, j), br(its:ite, j), ust(its:ite, j), znt(its:ite, j), &
                     zol(its:ite, j), hfx(its:ite, j), &
                     qfx(its:ite, j), lh(its:ite, j), mol(its:ite, j), rmol(its:ite, j), &
-                    qstar(its:ite, j), u10(its:ite, j), v10(its:ite, j), th2(its:ite, j), t2(its:ite, j), &
+                    qstar(its:ite, j), psim(its:ite, j), psih(its:ite, j), fm(its:ite, j), fh(its:ite, j), &
+                    u10(its:ite, j), v10(its:ite, j), th2(its:ite, j), t2(its:ite, j), &
                     q2(its:ite, j), qgh(its:ite, j), qsfc(its:ite, j), chs(its:ite, j), &
                     chs2(its:ite, j), cqs2(its:ite, j), flhc(its:ite, j), flqc(its:ite, j), &
                     ck(its:ite, j), cka(its:ite, j), cd(its:ite, j), cda(its:ite, j))
+
         enddo
     end subroutine sfclay_random_forest
 
     subroutine sfclay_random_forest_2d(its, ite, kts, kte, rf_sfc, &
-            u_2d, v_2d, qv_2d, t_2d, dz_2d, p_1d, &
-            mavail, xland, tsk, psfc, swdown, coszen, &
-            regime, br, ust, znt, zol, hfx, qfx, lh, mol, rmol, &
-            qstar, u10, v10, th2, t2, q2, qgh, qsfc, &
-            chs, chs2, cqs2, flhc, flqc, &
-            ck, cka, cd, cda)
+                                       u_2d, v_2d, qv_2d, t_2d, dz_2d, p_1d, &
+                                       mavail, xland, tsk, psfc, swdown, coszen, &
+                                       regime, br, ust, znt, zol, hfx, qfx, lh, mol, rmol, &
+                                       qstar, psim, psih, fm, fh, u10, v10, th2, t2, q2, qgh, qsfc, &
+                                       chs, chs2, cqs2, flhc, flqc, &
+                                       ck, cka, cd, cda)
+        real, parameter :: xka = 2.4e-5
         integer, intent(in) :: its, ite, kts, kte
         type(random_forests_sfclay), intent(in) :: rf_sfc
         real, dimension(its:ite, kts:kte), intent(in) :: u_2d, v_2d, &
@@ -144,15 +150,18 @@ contains
                 intent(inout) :: regime, br, ust, znt, zol, hfx, qfx, lh, mol, rmol, &
                 chs, chs2, cqs2, flhc, flqc
         real, dimension(its:ite), &
-                intent(out) :: qstar, u10, v10, th2, t2, q2, qgh, qsfc, ck, cka, cd, cda
+                intent(out) :: qstar, psim, psih, fm, fh, u10, v10, th2, t2, q2, qgh, qsfc, ck, cka, cd, cda
         ! declare derived variables
         real, dimension(kts:kte) :: potential_temperature, virtual_potential_temperature, wind_speed
         real :: zenith, d_vpt_d_z, skin_saturation_mixing_ratio, skin_potential_temperature, &
-                skin_saturation_vapor_pressure, skin_virtual_potential_temperature, total_dz, z_a
+                skin_saturation_vapor_pressure, skin_virtual_potential_temperature, total_dz, z_a, rho, cpm, &
+                gz1_o_z0, gz2_o_z0, gz10_o_z0, pq, pq2, pq10, psih2, psim2, psih10, psim10, psiq, psiq2, psiq10, zl, &
+                psix, psix2, psix10, psit, psit2, zl2, zl10, zol_0, zol_2, zol_10, zol_z_a
         real, dimension(11) :: ust_rf_inputs
         real, dimension(12) :: tstar_rf_inputs
         integer:: i, k
         do i = its, ite
+            print*, "i", i
             ! Calculate derived variables
             total_dz = 0
             z_a = dz_2d(i, 1)
@@ -173,20 +182,111 @@ contains
 
             ! Input variables into random forest input arrays
             ust_rf_inputs = (/ wind_speed(kts), wind_speed(kte), psfc(i), d_vpt_d_z, &
-                    skin_virtual_potential_temperature, skin_saturation_mixing_ratio, swdown(i), &
+                    skin_virtual_potential_temperature, skin_saturation_mixing_ratio * 1000.0, swdown(i), &
                     virtual_potential_temperature(kts), virtual_potential_temperature(kte), &
                     br(i), zenith /)
             tstar_rf_inputs = (/ wind_speed(kts), wind_speed(kte), psfc(i), d_vpt_d_z, &
-                    skin_virtual_potential_temperature, skin_saturation_mixing_ratio, swdown(i), &
+                    skin_virtual_potential_temperature, skin_saturation_mixing_ratio * 1000.0, swdown(i), &
                     virtual_potential_temperature(kts), virtual_potential_temperature(kte), &
                     mavail(i), br(i), zenith /)
             ! Run random forests to get ust, mol, and qstar
             ust(i) = random_forest_predict(real(ust_rf_inputs, 8), rf_sfc%friction_velocity)
             mol(i) = random_forest_predict(real(tstar_rf_inputs, 8), rf_sfc%temperature_scale)
             qstar(i) = random_forest_predict(real(tstar_rf_inputs, 8), rf_sfc%moisture_scale)
-
+            !print*, "rf outputs", ust(i), mol(i), qstar(i)
             ! Calculate diagnostics
-            zol(i) = karman * grav / potential_temperature(i, 1) * z_a * mol(i) / (ust(i) * ust(i))
+            zol(i) = karman * grav / potential_temperature(kts) * z_a * mol(i) / (ust(i) * ust(i))
+            rmol(i) = zol(i) / z_a
+            ! We need the zol values at different heights to calculate 2 m t and q and 10 m winds
+            zol_z_a = zol(i) * (z_a + znt(i)) / z_a
+            zol_10 = zol(i) * (10. + znt(i)) / z_a
+            zol_2 = zol(i) * (2 + znt(i)) / z_a
+            zol_0 = zol(i) * znt(i) / z_a
+            zl2 = (2.) / z_a * zol(i)
+            zl10 = (10.) / z_a * zol(i)
+
+            if ((xland(i) - 1.5) < 0.) then
+                zl = (0.01) / z_a * zol(i)   ! (0.01)/l
+            else
+                zl = zol_0                     ! z0/l
+            endif
+            ! print*, "zols", zol(i), zol_z_a, zol_2, zol_0, zl2, zl10, znt(i)
+            gz1_o_z0 = alog((z_a + znt(i)) / znt(i))
+            gz2_o_z0 = alog((2. + znt(i)) / znt(i))
+            gz10_o_z0 = alog((10. + znt(i)) / znt(i))
+            ! Calculate stability regimes for 2 and 10 m diagnostics
+            if (br(i) > 0.) then
+                regime(i) = 1.
+                psim(i) = psim_stable(zol_z_a) - psim_stable(zol_0)
+                psih(i) = psim_stable(zol_z_a) - psih_stable(zol_0)
+                psim10 = psim_stable(zol_10) - psim_stable(zol_0)
+                psih10 = psih_stable(zol_10) - psih_stable(zol_0)
+
+                psim2 = psim_stable(zol_2) - psim_stable(zol_0)
+                psih2 = psih_stable(zol_2) - psih_stable(zol_0)
+
+                pq = psih_stable(zol(i)) - psih_stable(zl)
+                pq2 = psih_stable(zl2) - psih_stable(zl)
+                pq10 = psih_stable(zl10) - psih_stable(zl)
+            elseif (br(i) == 0.) then
+                regime(i) = 3.
+                psim(i) = 0.
+                psih(i) = 0.
+                psim10 = 0.
+                psih10 = 0.
+                psim2 = 0.
+                psih2 = 0.
+                pq = 0.
+                pq2 = 0.
+                pq10 = 0.
+            else
+                regime(i) = 4.
+                psim(i) = psim_unstable(zol_z_a) - psim_unstable(zol_0)
+                psih(i) = psih_unstable(zol_z_a) - psim_unstable(zol_0)
+
+                psim10 = psim_unstable(zol_10) - psim_unstable(zol_0)
+                psih10 = psih_unstable(zol_10) - psih_unstable(zol_0)
+
+                psim2  = psim_unstable(zol_2) - psim_unstable(zol_0)
+                psih2 = psih_unstable(zol_2) - psih_unstable(zol_0)
+
+                pq = psih_unstable(zol(i)) - psih_unstable(zl)
+                pq2 = psih_unstable(zl2) - psih_unstable(zl)
+                pq10 = psih_unstable(zl10) - psih_unstable(zl)
+            end if
+            psix = gz1_o_z0 - psim(i)
+            psix10 = gz10_o_z0 - psim10
+
+            psit = gz1_o_z0 - psih(i)
+            psit2 = gz2_o_z0 - psih2
+            psiq = alog(karman * ust(i) * z_a / xka + z_a / zl) - pq
+            psiq2 = alog(karman * ust(i) * 2. / xka + 2. / zl) - pq2
+
+            ! ahw: mods to compute ck, cd
+            psiq10 = alog(karman * ust(i) * 10. / xka + 10. / zl) - pq10
+            ! Calculate 10 and 2 m diagnostics
+            u10(i) = u_2d(i, kts) * psix10 / psix
+            v10(i) = u_2d(i, kts) * psix10 / psix
+            th2(i) = skin_potential_temperature + (potential_temperature(kts) - skin_potential_temperature) * psit2 / psit
+            t2(i) = th2(i) * (psfc(i) / p_1000mb) ** r_over_cp
+            q2(i) = skin_saturation_mixing_ratio + (qv_2d(i, kts) - skin_saturation_mixing_ratio) * psiq2 / psiq
+            fm(i) = psix
+            fh(i) = psit
+            chs(i) = ust(i) * karman / psiq
+            cqs2(i) = ust(i) * karman / psiq2
+            chs2(i) = ust(i) * karman / psit2
+            ck(i) = (karman / psix10) * (karman / psiq10)
+            cd(i) = (karman / psix10) * (karman / psix10)
+            cka(i) = (karman / psix) * (karman / psiq)
+            cda(i) = (karman / psix) * (karman / psix)
+            ! Calculate fluxes and exchange coefficients
+            rho = psfc(i) / (r_d * t_2d(i, kts))
+            cpm = cp * (1.0 + 0.8 * qv_2d(i, kts))
+            hfx(i) = -cpm * rho * ust(i) * mol(i)
+            flhc(i) = hfx(i) / (skin_virtual_potential_temperature - virtual_potential_temperature(kts))
+            qfx(i) = rho * ust(i) * qstar(i)
+            flqc(i) = qfx(i) / (skin_saturation_mixing_ratio - qv_2d(i, kts))
+            lh(i) = xlv * qfx(i)
 
         end do
     end subroutine sfclay_random_forest_2d
@@ -204,10 +304,10 @@ contains
         call load_random_forest(friction_velocity_random_forest_path, rf_sfc%friction_velocity)
         call load_random_forest(temperature_scale_random_forest_path, rf_sfc%temperature_scale)
         call load_random_forest(moisture_scale_random_forest_path, rf_sfc%moisture_scale)
-        call sfclayrev_init_table()
+        call sfclayrev_init_table
     end subroutine init_sfclay_random_forest
 
-    subroutine sfclayrev_init_table()
+    subroutine sfclayrev_init_table
         ! Initialize lookup table of stability functions.
         integer                   ::      n
         real                      ::      zolf
@@ -227,7 +327,8 @@ contains
     end subroutine sfclayrev_init_table
 
     function zolri(ri, z, z0)
-        !
+        real, intent(in) :: ri, z, z0
+        real :: zolri, fx1, fx2, x1, x2
         if (ri < 0.)then
             x1 = -5.
             x2 = 0.
@@ -259,8 +360,14 @@ contains
     ! -----------------------------------------------------------------------
     !
     function zolri2(zol2, ri2, z, z0)
+        real, intent(in) :: zol2, ri2, z, z0
+        real :: zol2b, zolri2, zol20, zol3, psix2, psih2
         !
-        if(zol2 * ri2 < 0.)zol2 = 0.  ! limit zol2 - must be same sign as ri2
+        if (zol2 * ri2 < 0.) then
+            zol2b = 0.
+        else
+            zol2b = zol2
+        end if  ! limit zol2 - must be same sign as ri2
         !
         zol20 = zol2 * z0 / z ! z0/L
         zol3 = zol2 + zol20 ! (z+z0)/L
@@ -273,7 +380,7 @@ contains
             psih2 = log((z + z0) / z0) - (psih_stable(zol3) - psih_stable(zol20))
         endif
         !
-        zolri2 = zol2 * psih2 / psix2**2 - ri2
+        zolri2 = zol2b * psih2 / psix2**2 - ri2
         !
         return
     end function
@@ -281,16 +388,22 @@ contains
     ! ... integrated similarity functions ...
     !
     function psim_stable_full(zolf)
+        real, intent(in) :: zolf
+        real :: psim_stable_full
         psim_stable_full = -6.1 * log(zolf + (1 + zolf**2.5)**(1. / 2.5))
         return
     end function
 
     function psih_stable_full(zolf)
+        real, intent(in) :: zolf
+        real :: psih_stable_full
         psih_stable_full = -5.3 * log(zolf + (1 + zolf**1.1)**(1. / 1.1))
         return
     end function
 
     function psim_unstable_full(zolf)
+        real, intent(in) :: zolf
+        real :: x, psimk, ym, psimc, psim_unstable_full
         x = (1. - 16. * zolf)**.25
         psimk = 2 * alog(0.5 * (1 + X)) + alog(0.5 * (1 + X * X)) - 2. * atan(X) + 2. * atan(1.)
         !
@@ -303,6 +416,8 @@ contains
     end function
 
     function psih_unstable_full(zolf)
+        real, intent(in) :: zolf
+        real :: y, psihk, yh, psihc, psih_unstable_full
         y = (1. - 16. * zolf)**.5
         psihk = 2. * log((1 + y) / 2.)
         !
@@ -316,8 +431,9 @@ contains
 
     ! look-up table functions
     function psim_stable(zolf)
+        real, intent(in) :: zolf
         integer :: nzol
-        real :: rzol
+        real :: rzol, psim_stable
         nzol = int(zolf * 100.)
         rzol = zolf * 100. - nzol
         if (nzol + 1 <= 1000) then
@@ -329,8 +445,9 @@ contains
     end function
 
     function psih_stable(zolf)
+        real, intent(in) :: zolf
         integer :: nzol
-        real :: rzol
+        real :: rzol, psih_stable
         nzol = int(zolf * 100.)
         rzol = zolf * 100. - nzol
         if (nzol + 1 <= 1000) then
@@ -342,8 +459,9 @@ contains
     end function
 
     function psim_unstable(zolf)
+        real, intent(in) :: zolf
         integer :: nzol
-        real :: rzol
+        real :: rzol, psim_unstable
         nzol = int(-zolf * 100.)
         rzol = -zolf * 100. - nzol
         if (nzol + 1 <= 1000) then
@@ -355,8 +473,9 @@ contains
     end function
 
     function psih_unstable(zolf)
+        real, intent(in) :: zolf
         integer :: nzol
-        real :: rzol
+        real :: rzol, psih_unstable
         nzol = int(-zolf * 100.)
         rzol = -zolf * 100. - nzol
         if (nzol + 1 <= 1000) then

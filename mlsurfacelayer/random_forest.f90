@@ -74,7 +74,7 @@ module random_forest
         deallocate(filenames)
     end subroutine load_random_forest
 
-    pure function random_forest_predict(input_data, random_forest_array) result(prediction)
+    function random_forest_predict(input_data, random_forest_array) result(prediction)
         real(kind=8), intent(in) :: input_data(:)
         type(decision_tree), intent(in) :: random_forest_array(:)
         real(kind=8) :: prediction
@@ -91,7 +91,7 @@ module random_forest
         deallocate(tree_predictions)
     end function random_forest_predict
 
-    pure function decision_tree_predict(input_data_tree, tree) result(tree_prediction)
+    function decision_tree_predict(input_data_tree, tree) result(tree_prediction)
         real(kind=8), intent(in) :: input_data_tree(:)
         type(decision_tree), intent(in) :: tree
         integer :: node
@@ -106,6 +106,9 @@ module random_forest
                 tree_prediction = tree%tvalue(node)
                 not_leaf = .FALSE.
             else
+                if (tree%feature(node) + 1 > size(input_data_tree)) then
+                    print*, tree%feature(node) + 1, size(input_data_tree)
+                end if
                 exceeds = input_data_tree(tree%feature(node) + 1) > tree%threshold(node)
                 if (exceeds) then
                     node = tree%children_right(node) + 1

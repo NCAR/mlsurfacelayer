@@ -1,5 +1,5 @@
 data_file: "/Users/dgagne/data/cabauw_derived_data_20190312.csv"
-out_dir: "/Users/dgagne/data/cabauw_surface_layer_models_20190318/"
+out_dir: "/Users/dgagne/data/cabauw_surface_layer_models_20190417/"
 train_test_split_date: "2011-01-01"
 output_types: ["friction_velocity", "temperature_scale", "moisture_scale"]
 model_metric_types: ["mean_squared_error", "mean_absolute_error", "mean_error", "pearson_r2", "hellinger_distance"]
@@ -23,7 +23,6 @@ input_columns:
                       "global horizontal irradiance_0 m_W m-2",
                       "virtual potential temperature_10 m_K",
                       "virtual potential temperature_20 m_K",
-                      "relative humidity_10 m_%",
                       "moisture availability_3 cm_",
                       "bulk richardson_10 m_",
                       "zenith_0 m_degrees"]
@@ -36,7 +35,6 @@ input_columns:
                    "global horizontal irradiance_0 m_W m-2",
                    "virtual potential temperature_10 m_K",
                    "virtual potential temperature_20 m_K",
-                   "relative humidity_10 m_%",
                    "moisture availability_3 cm_",
                    "bulk richardson_10 m_",
                    "zenith_0 m_degrees"]
