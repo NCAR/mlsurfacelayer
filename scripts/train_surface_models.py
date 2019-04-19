@@ -95,12 +95,19 @@ def main():
             model_objects[model_name] = {}
             print("Training", output_type, model_name)
             model_objects[model_name][output_type] = model_classes[model_name](**model_config)
-            model_objects[model_name][output_type].fit(scaled_train_input,
-                                                        data["train"][output_columns[output_type]].values)
+            if model_name == "random_forest":
+                model_objects[model_name][output_type].fit(data["train"][input_columns[output_type]],
+                                                           data["train"][output_columns[output_type]].values)
+            else:
+                model_objects[model_name][output_type].fit(scaled_train_input,
+                                                           data["train"][output_columns[output_type]].values)
             print("Predicting", output_type, model_name)
             full_model = output_type + "-" + model_name
-            model_predictions.loc[:,
-                full_model] = model_objects[model_name][output_type].predict(scaled_test_input)
+            if model_name == "random_forest":
+                model_predictions.loc[:, full_model] = model_objects[model_name][output_type].predict(data["test"][input_columns[output_type]])
+            else:
+                model_predictions.loc[:,
+                    full_model] = model_objects[model_name][output_type].predict(scaled_test_input)
             for model_metric in model_metric_types:
                 model_metrics.loc[full_model,
                                       model_metric] = metrics[model_metric](data["test"][output_columns[output_type]].values,
