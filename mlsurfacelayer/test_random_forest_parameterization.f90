@@ -19,8 +19,7 @@ program test_random_forest_parameterization
                 coszen
     real, dimension(ims:ime, jms:jme) :: regime, br, ust, znt, zol, hfx, qfx, lh, mol, rmol, &
             chs, chs2, cqs2, flhc, flqc, psim, psih, fm, fh
-    real, dimension(ims:ime, jms:jme) :: qstar, u10, v10, th2, t2, q2, qgh, qsfc, ck, cka, cd, cda
-    type(random_forests_sfclay) :: rf_sfc
+    real, dimension(ims:ime, jms:jme) :: qstar, u10, v10, th2, t2, q2, qsfc, ck, cka, cd, cda
     character(len=74) :: friction_velocity_path
     character(len=74) :: temperature_scale_path
     character(len=71) :: moisture_scale_path
@@ -64,15 +63,23 @@ program test_random_forest_parameterization
     print *, qv_3d(1, :, 1)
     print *, p_3d(1, :, 1)
     print *, friction_velocity_path
-    call init_sfclay_random_forest(friction_velocity_path, temperature_scale_path, moisture_scale_path, rf_sfc)
+    call init_sfclay_random_forest(friction_velocity_path, temperature_scale_path, moisture_scale_path)
     print *, size(rf_sfc%friction_velocity)
     call sfclay_random_forest(ims, ime, jms, jme, kms, kme, &
                               its, ite, jts, jte, kts, kte, &
                               n_vertial_layers, &
                               u_3d, v_3d, t_3d, qv_3d, p_3d, dz_3d, mavail, &
-                              xland, tsk, psfc, swdown, coszen, &
-                              rf_sfc, &
-                              regime, psim, psih, fm, fh, br, ust, znt, zol, mol, &
-                              rmol, hfx, qfx, lh, qstar, u10, v10, th2, t2, q2, qgh, qsfc, &
-                              chs, chs2, cqs2, flhc, flqc, ck, cka, cd, cda)
+                              xland, tsk, psfc, swdown, coszen, znt, &
+                             br, ust, mol, qstar, zol, &
+                             rmol, hfx, qfx, lh, &
+                             regime, psim, psih, fm, fh, &
+            u10, v10, th2, t2, q2, qsfc, &
+            chs, chs2, cqs2, flhc, flqc, &
+            ck, cka, cd, cda)
+    print *, ust(1, 1), mol(1, 1), qstar(1, 1)
+    print *, hfx(1, 1), qfx(1, 1), lh(1, 1)
+    print *, t2(1, 1), u10(1, 1), v10(1, 1), q2(1, 1), qsfc(1, 1)
+    print *, zol(1, 1), chs(1, 1), chs2(1, 1), cqs2(1, 1)
+    print *, flhc(1, 1), flqc(1, 1), ck(1, 1), cka(1, 1), cd(1, 1), cda(1, 1)
+    print *, psim(1, 1), psih(1, 1), fm(1, 1), fh(1, 1)
 end program test_random_forest_parameterization

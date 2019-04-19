@@ -20,6 +20,8 @@ module module_sf_sfclay_random_forest
     real, parameter :: karman = 0.4
 
     real, dimension(0:1000 ), save :: psim_stab, psim_unstab, psih_stab, psih_unstab
+    ! Random forest storage type. Initialized in subroutine
+    type(random_forests_sfclay), save :: rf_sfc
 
 contains
 
@@ -27,11 +29,11 @@ contains
             its, ite, jts, jte, kts, kte, &
             n_vertical_layers, &
             u_3d, v_3d, t_3d, qv_3d, p_3d, dz_3d, mavail, &
-            xland, tsk, psfc, swdown, coszen, &
-            rf_sfc, &
-            regime, psim, psih, fm, fh, br, ust, znt, zol, mol, &
+            xland, tsk, psfc, swdown, coszen, znt, &
+            br, ust, mol, qstar, zol, &
             rmol, hfx, qfx, lh, &
-            qstar, u10, v10, th2, t2, q2, qgh, qsfc, &
+            regime, psim, psih, fm, fh, &
+            u10, v10, th2, t2, q2, qsfc, &
             chs, chs2, cqs2, flhc, flqc, &
             ck, cka, cd, cda)
         ! Definition: This subroutine calculates the surface layer fluxes and associated diagnostics
@@ -55,16 +57,32 @@ contains
         !   psfc (real): Pressure at the surface in Pa.
         !   swdown (real): Downward shortwave irradiance at the surface in W m-2.
         !   coszen (real): Cosine of the solar zenith angle.
-        !   rf_sfc (random_forests_sfclay): Collection of random forests for each surface layer process
+        !   znt (real): roughness length in m.
         !
         ! Output fields:
+        !   br (real): Bulk richardson number
+        !   ust (real): friction velocity in m s-1
+        !   mol (real): temperature scale in K
+        !   qstar (real): moisture scale in kg kg-1
+        !   zol (real): z over Obukov Length (non-dimensional)
+        !   rmol (real): Obukov Length (m)
+        !   hfx (real): sensible heat flux in W m-2
+        !   qfx (real): moisture flux in
         !   regime (real): The stability regime
         !   psim (real): stability function for momentum
         !   psih (real): stability function for sensible heat
-        !   fm (real):
-        !   br (real): Bulk richardson number
-        !   ust (real): friction velocity in m s-1
-        !   hfx (real):
+        !   fm (real): integrated stability function for momentum
+        !   fh (real): integrated stability function for heat
+        !   u10 (real): 10 m zonal wind m/s
+        !   v10 (real): 10 m meridional wind m / s
+        !   t2 (real): 2 m temperature K
+        !   q2 (real): 2 m mixing ratio kg / kg
+        !   qsfc (real): saturation mixing ratio at the surface (kg / kg)
+        !   chs (real): heat/moisture exchange coefficient for lsm (m /s)
+        !   chs2 (real): heat exchange coefficient for lsm at 2 m (m /s)
+        !   cqs2 (real): moisture exchange coefficient for lsm at 2 m
+        !   flhc (real): exchange coefficient for heat (w/m^2/K)
+        !   flqc (real): exchange coefficient for moisture (W/m^2/s)
         integer, intent(in) :: ims, ime, jms, jme, kms, kme, &
                 its, ite, jts, jte, kts, kte, &
                 n_vertical_layers
@@ -83,16 +101,14 @@ contains
                 tsk, &
                 psfc, &
                 swdown, &
-                coszen
-
-        type(random_forests_sfclay), intent(in) :: rf_sfc
-
+                coszen, &
+                znt
         real, dimension(ims:ime, jms:jme), &
-                intent(inout) :: regime, br, ust, znt, zol, hfx, qfx, lh, mol, rmol, &
+                intent(inout) :: regime, br, ust, zol, hfx, qfx, lh, mol, rmol, &
                 chs, chs2, cqs2, flhc, flqc, psim, psih, fm, fh
 
         real, dimension(ims:ime, jms:jme), &
-                intent(out) :: qstar, u10, v10, th2, t2, q2, qgh, qsfc, ck, cka, cd, cda
+                intent(out) :: qstar, u10, v10, th2, t2, q2, qsfc, ck, cka, cd, cda
 
         real, dimension(its:ite, kts:kts+n_vertical_layers) :: u_2d, &
                 v_2d, &
@@ -115,8 +131,7 @@ contains
                 end do
                 p_1d(i) = p_3d(i, kts, j)
             end do
-            print*, "J", j
-            call sfclay_random_forest_2d(its, ite, kts, kstop, rf_sfc, &
+            call sfclay_random_forest_2d(its, ite, kts, kstop, &
                     u_2d, v_2d, qv_2d, t_2d, dz_2d, p_1d, &
                     mavail(its:ite, j), xland(its:ite, j), tsk(its:ite, j), psfc(its:ite, j), &
                     swdown(its:ite, j), coszen(its:ite, j), &
@@ -125,35 +140,33 @@ contains
                     qfx(its:ite, j), lh(its:ite, j), mol(its:ite, j), rmol(its:ite, j), &
                     qstar(its:ite, j), psim(its:ite, j), psih(its:ite, j), fm(its:ite, j), fh(its:ite, j), &
                     u10(its:ite, j), v10(its:ite, j), th2(its:ite, j), t2(its:ite, j), &
-                    q2(its:ite, j), qgh(its:ite, j), qsfc(its:ite, j), chs(its:ite, j), &
+                    q2(its:ite, j), qsfc(its:ite, j), chs(its:ite, j), &
                     chs2(its:ite, j), cqs2(its:ite, j), flhc(its:ite, j), flqc(its:ite, j), &
                     ck(its:ite, j), cka(its:ite, j), cd(its:ite, j), cda(its:ite, j))
 
         enddo
     end subroutine sfclay_random_forest
 
-    subroutine sfclay_random_forest_2d(its, ite, kts, kte, rf_sfc, &
+    subroutine sfclay_random_forest_2d(its, ite, kts, kstop, &
                                        u_2d, v_2d, qv_2d, t_2d, dz_2d, p_1d, &
                                        mavail, xland, tsk, psfc, swdown, coszen, &
                                        regime, br, ust, znt, zol, hfx, qfx, lh, mol, rmol, &
-                                       qstar, psim, psih, fm, fh, u10, v10, th2, t2, q2, qgh, qsfc, &
+                                       qstar, psim, psih, fm, fh, u10, v10, th2, t2, q2, qsfc, &
                                        chs, chs2, cqs2, flhc, flqc, &
                                        ck, cka, cd, cda)
         real, parameter :: xka = 2.4e-5
-        integer, intent(in) :: its, ite, kts, kte
-        type(random_forests_sfclay), intent(in) :: rf_sfc
-        real, dimension(its:ite, kts:kte), intent(in) :: u_2d, v_2d, &
+        integer, intent(in) :: its, ite, kts, kstop
+        real, dimension(its:ite, kts:kstop), intent(in) :: u_2d, v_2d, &
                 qv_2d, t_2d, dz_2d
         real, dimension(its:ite), intent(in) :: p_1d
-        real, dimension(its:ite), intent(in) :: mavail, xland, tsk, psfc, swdown, coszen
-        real, dimension(its:ite), &
-                intent(inout) :: regime, br, ust, znt, zol, hfx, qfx, lh, mol, rmol, &
+        real, dimension(its:ite), intent(in) :: mavail, xland, tsk, psfc, swdown, coszen, znt
+        real, dimension(its:ite), intent(inout) :: regime, br, ust, zol, hfx, qfx, lh, mol, rmol, &
                 chs, chs2, cqs2, flhc, flqc
         real, dimension(its:ite), &
-                intent(out) :: qstar, psim, psih, fm, fh, u10, v10, th2, t2, q2, qgh, qsfc, ck, cka, cd, cda
+                intent(out) :: qstar, psim, psih, fm, fh, u10, v10, th2, t2, q2, qsfc, ck, cka, cd, cda
         ! declare derived variables
-        real, dimension(kts:kte) :: potential_temperature, virtual_potential_temperature, wind_speed
-        real :: zenith, d_vpt_d_z, skin_saturation_mixing_ratio, skin_potential_temperature, &
+        real, dimension(kts:kstop) :: potential_temperature, virtual_potential_temperature, wind_speed
+        real :: zenith, d_vpt_d_z, skin_potential_temperature, &
                 skin_saturation_vapor_pressure, skin_virtual_potential_temperature, total_dz, z_a, rho, cpm, &
                 gz1_o_z0, gz2_o_z0, gz10_o_z0, pq, pq2, pq10, psih2, psim2, psih10, psim10, psiq, psiq2, psiq10, zl, &
                 psix, psix2, psix10, psit, psit2, zl2, zl10, zol_0, zol_2, zol_10, zol_z_a
@@ -161,38 +174,37 @@ contains
         real, dimension(12) :: tstar_rf_inputs
         integer:: i, k
         do i = its, ite
-            print*, "i", i
             ! Calculate derived variables
             total_dz = 0
             z_a = dz_2d(i, 1)
-            do k = kts, kte
+            do k = kts, kstop
                 potential_temperature(k) = t_2d(i, k) * (psfc(i) / p_1000mb) ** r_over_cp
                 virtual_potential_temperature(k) = potential_temperature(k) * (1. + 0.61 * qv_2d(i, k))
                 wind_speed(k) = sqrt(u_2d(i, k) ** 2. + v_2d(i, k) ** 2.)
                 total_dz = total_dz + dz_2d(i, k)
             end do
             zenith = acos(coszen(i))
-            d_vpt_d_z = (virtual_potential_temperature(kte) - virtual_potential_temperature(kts)) / (total_dz - dz_2d(i, kts))
+            d_vpt_d_z = (virtual_potential_temperature(kstop) - virtual_potential_temperature(kts)) / (total_dz - dz_2d(i, kts))
             skin_saturation_vapor_pressure = e_s_o * exp(xlv / r_v * (1.0 / 273.0 - 1. / tsk(i)))
-            skin_saturation_mixing_ratio = eps * skin_saturation_vapor_pressure / (psfc(i) - skin_saturation_vapor_pressure)
+            qsfc(i) = eps * skin_saturation_vapor_pressure / (psfc(i) - skin_saturation_vapor_pressure)
             skin_potential_temperature = tsk(i) * (psfc(i) / p_1000mb) ** r_over_cp
-            skin_virtual_potential_temperature = skin_potential_temperature * (1. + 0.61 * skin_saturation_mixing_ratio)
+            skin_virtual_potential_temperature = skin_potential_temperature * (1. + 0.61 * qsfc(i))
             br(i) = grav / virtual_potential_temperature(kts) * dz_2d(i, kts) * &
                     (virtual_potential_temperature(kts) - skin_virtual_potential_temperature) / (wind_speed(kts) * wind_speed(kts))
 
             ! Input variables into random forest input arrays
-            ust_rf_inputs = (/ wind_speed(kts), wind_speed(kte), psfc(i), d_vpt_d_z, &
-                    skin_virtual_potential_temperature, skin_saturation_mixing_ratio * 1000.0, swdown(i), &
-                    virtual_potential_temperature(kts), virtual_potential_temperature(kte), &
+            ust_rf_inputs = (/ wind_speed(kts), wind_speed(kstop), psfc(i), d_vpt_d_z, &
+                    skin_virtual_potential_temperature, qsfc(i) * 1000.0, swdown(i), &
+                    virtual_potential_temperature(kts), virtual_potential_temperature(kstop), &
                     br(i), zenith /)
-            tstar_rf_inputs = (/ wind_speed(kts), wind_speed(kte), psfc(i), d_vpt_d_z, &
-                    skin_virtual_potential_temperature, skin_saturation_mixing_ratio * 1000.0, swdown(i), &
-                    virtual_potential_temperature(kts), virtual_potential_temperature(kte), &
+            tstar_rf_inputs = (/ wind_speed(kts), wind_speed(kstop), psfc(i), d_vpt_d_z, &
+                    skin_virtual_potential_temperature, qsfc(i) * 1000.0, swdown(i), &
+                    virtual_potential_temperature(kts), virtual_potential_temperature(kstop), &
                     mavail(i), br(i), zenith /)
             ! Run random forests to get ust, mol, and qstar
             ust(i) = random_forest_predict(real(ust_rf_inputs, 8), rf_sfc%friction_velocity)
             mol(i) = random_forest_predict(real(tstar_rf_inputs, 8), rf_sfc%temperature_scale)
-            qstar(i) = random_forest_predict(real(tstar_rf_inputs, 8), rf_sfc%moisture_scale)
+            qstar(i) = random_forest_predict(real(tstar_rf_inputs, 8), rf_sfc%moisture_scale) / 1000.0
             !print*, "rf outputs", ust(i), mol(i), qstar(i)
             ! Calculate diagnostics
             zol(i) = karman * grav / potential_temperature(kts) * z_a * mol(i) / (ust(i) * ust(i))
@@ -205,12 +217,11 @@ contains
             zl2 = (2.) / z_a * zol(i)
             zl10 = (10.) / z_a * zol(i)
 
-            if ((xland(i) - 1.5) < 0.) then
-                zl = (0.01) / z_a * zol(i)   ! (0.01)/l
+            if ((xland(i) - 1.5) >= 0.) then
+                zl = znt(i)  ! (0.01)/l
             else
-                zl = zol_0                     ! z0/l
+                zl = 0.01
             endif
-            ! print*, "zols", zol(i), zol_z_a, zol_2, zol_0, zl2, zl10, znt(i)
             gz1_o_z0 = alog((z_a + znt(i)) / znt(i))
             gz2_o_z0 = alog((2. + znt(i)) / znt(i))
             gz10_o_z0 = alog((10. + znt(i)) / znt(i))
@@ -261,15 +272,14 @@ contains
             psit2 = gz2_o_z0 - psih2
             psiq = alog(karman * ust(i) * z_a / xka + z_a / zl) - pq
             psiq2 = alog(karman * ust(i) * 2. / xka + 2. / zl) - pq2
-
             ! ahw: mods to compute ck, cd
             psiq10 = alog(karman * ust(i) * 10. / xka + 10. / zl) - pq10
             ! Calculate 10 and 2 m diagnostics
             u10(i) = u_2d(i, kts) * psix10 / psix
-            v10(i) = u_2d(i, kts) * psix10 / psix
+            v10(i) = v_2d(i, kts) * psix10 / psix
             th2(i) = skin_potential_temperature + (potential_temperature(kts) - skin_potential_temperature) * psit2 / psit
             t2(i) = th2(i) * (psfc(i) / p_1000mb) ** r_over_cp
-            q2(i) = skin_saturation_mixing_ratio + (qv_2d(i, kts) - skin_saturation_mixing_ratio) * psiq2 / psiq
+            q2(i) = qsfc(i) + (qv_2d(i, kts) - qsfc(i)) * psiq2 / psiq
             fm(i) = psix
             fh(i) = psit
             chs(i) = ust(i) * karman / psiq
@@ -285,7 +295,7 @@ contains
             hfx(i) = -cpm * rho * ust(i) * mol(i)
             flhc(i) = hfx(i) / (skin_virtual_potential_temperature - virtual_potential_temperature(kts))
             qfx(i) = rho * ust(i) * qstar(i)
-            flqc(i) = qfx(i) / (skin_saturation_mixing_ratio - qv_2d(i, kts))
+            flqc(i) = qfx(i) / (qsfc(i) - qv_2d(i, kts))
             lh(i) = xlv * qfx(i)
 
         end do
@@ -293,13 +303,13 @@ contains
 
     subroutine init_sfclay_random_forest(friction_velocity_random_forest_path, &
             temperature_scale_random_forest_path, &
-            moisture_scale_random_forest_path, &
-            rf_sfc)
+            moisture_scale_random_forest_path)
+        ! Loads random forests from disk and initializes lookup tables for stability
+        ! functions.
+        ! paths should be to the directories containing random forest csv files.
         character(len=*), intent(in) :: friction_velocity_random_forest_path
         character(len=*), intent(in) :: temperature_scale_random_forest_path
         character(len=*), intent(in) :: moisture_scale_random_forest_path
-        type(random_forests_sfclay), intent(out) :: rf_sfc
-
 
         call load_random_forest(friction_velocity_random_forest_path, rf_sfc%friction_velocity)
         call load_random_forest(temperature_scale_random_forest_path, rf_sfc%temperature_scale)
