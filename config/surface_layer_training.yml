@@ -1,5 +1,5 @@
 data_file: "/Users/dgagne/data/cabauw_derived_data_20190312.csv"
-out_dir: "/Users/dgagne/data/cabauw_surface_layer_models_20190417/"
+out_dir: "/Users/dgagne/data/cabauw_surface_layer_models_20190419/"
 train_test_split_date: "2011-01-01"
 output_types: ["friction_velocity", "temperature_scale", "moisture_scale"]
 model_metric_types: ["mean_squared_error", "mean_absolute_error", "mean_error", "pearson_r2", "hellinger_distance"]
@@ -37,7 +37,9 @@ input_columns:
                    "virtual potential temperature_20 m_K",
                    "moisture availability_3 cm_",
                    "bulk richardson_10 m_",
-                   "zenith_0 m_degrees"]
+                   "zenith_0 m_degrees",
+                   "mixing ratio_10 m_g kg-1",
+                   "mixing ratio_20 m_g kg-1"]
 output_columns:
   friction_velocity: "friction velocity_surface_m s-1"
   temperature_scale: "temperature scale_surface_K"
@@ -56,10 +58,10 @@ model_config:
   neural_network:
     hidden_layers: 3
     hidden_neurons: 64
-    batch_size: 256
+    batch_size: 512
     epochs: 10
     lr: 0.001
-    activation: selu
+    activation: relu
     l2_weight: 0.0001
 
 
