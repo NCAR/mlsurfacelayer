@@ -1,0 +1,65 @@
+data_file: "/Users/dgagne/data/cabauw_derived_data_20190312.csv"
+out_dir: "/Users/dgagne/data/cabauw_surface_layer_models_20190417/"
+train_test_split_date: "2011-01-01"
+output_types: ["friction_velocity", "temperature_scale", "moisture_scale"]
+model_metric_types: ["mean_squared_error", "mean_absolute_error", "mean_error", "pearson_r2", "hellinger_distance"]
+input_columns:
+  friction_velocity: ["wind speed_10 m_m s-1",
+                      "wind speed_20 m_m s-1",
+                      "pressure_2 m_hPa",
+                      "temperature change_15 m_K m-1",
+                      "skin virtual potential temperature_0 m_K",
+                      "global horizontal irradiance_0 m_W m-2",
+                      "virtual potential temperature_10 m_K",
+                      "virtual potential temperature_20 m_K",
+                      "bulk richardson_10 m_",
+                      "zenith_0 m_degrees"]
+  temperature_scale: ["wind speed_10 m_m s-1",
+                      "wind speed_20 m_m s-1",
+                      "pressure_2 m_hPa",
+                      "temperature change_15 m_K m-1",
+                      "skin virtual potential temperature_0 m_K",
+                      "skin saturation mixing ratio_0 m_g kg-1",
+                      "global horizontal irradiance_0 m_W m-2",
+                      "virtual potential temperature_10 m_K",
+                      "virtual potential temperature_20 m_K",
+                      "moisture availability_3 cm_",
+                      "bulk richardson_10 m_",
+                      "zenith_0 m_degrees"]
+  moisture_scale: ["wind speed_10 m_m s-1",
+                   "wind speed_20 m_m s-1",
+                   "pressure_2 m_hPa",
+                   "temperature change_15 m_K m-1",
+                   "skin virtual potential temperature_0 m_K",
+                   "skin saturation mixing ratio_0 m_g kg-1",
+                   "global horizontal irradiance_0 m_W m-2",
+                   "virtual potential temperature_10 m_K",
+                   "virtual potential temperature_20 m_K",
+                   "moisture availability_3 cm_",
+                   "bulk richardson_10 m_",
+                   "zenith_0 m_degrees"]
+output_columns:
+  friction_velocity: "friction velocity_surface_m s-1"
+  temperature_scale: "temperature scale_surface_K"
+  moisture_scale: "moisture scale_surface_g kg-1"
+derived_columns: ["sensible heat flux_surface_W m-2",
+                  "latent heat flux_surface_W m-2",
+                  "bulk richardson_10 m_",
+                  "air density_10 m_kg m-3",
+                  "obukhov length_surface_m"]
+model_config:
+  random_forest:
+    n_estimators: 100
+    max_features: "sqrt"
+    n_jobs: 4
+    max_leaf_nodes: 1024
+  neural_network:
+    hidden_layers: 3
+    hidden_neurons: 64
+    batch_size: 256
+    epochs: 10
+    lr: 0.001
+    activation: selu
+    l2_weight: 0.0001
+
+
