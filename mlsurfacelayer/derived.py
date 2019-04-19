@@ -131,7 +131,7 @@ def bulk_richardson_number(potential_temperature_k, height,
         wind_speed_m_s: The wind speed in m s-1
 
     Returns:
-
+        The bulk richardson number.
     """
     g = 9.81  # m s-2
     virtual_potential_temperature_k = virtual_temperature(potential_temperature_k, mixing_ratio_g_kg)
@@ -160,3 +160,70 @@ def obukhov_length(potential_temperature_k, temperature_scale_k, friction_veloci
     return np.maximum(friction_velocity_m_s, min_friction_velocity) ** 2 * potential_temperature_k / (
             von_karman_constant * g * adjusted_temperature_scale)
 
+
+def skin_temperature(upward_longwave_irradiance_W_m2, emissivity=0.97):
+    """
+    Calculates the radiative skin temperature from the upward longwave irradiance.
+
+    Args:
+        upward_longwave_irradiance_W_m2: The upward longwave irradiance from the surface
+        emissivity: How much energy is emitted in comparison to a blackbody. Ranges from 0 to 1.
+
+    Returns:
+        The skin temperature in Kelvin.
+    """
+    sigma = 5.673067e-8
+    return (upward_longwave_irradiance_W_m2 / (emissivity * sigma)) ** 0.25
+
+
+def moisture_availability(soil_water_content_m3_m3, field_capacity=0.47):
+    """
+    Calculate the moisture availability, which is a scaled measure of soil moisture relative to the field
+    capacity of a given soil type.
+
+    Args:
+        soil_water_content_m3_m3:
+        field_capacity:
+
+    Returns:
+
+    """
+    mavail = np.zeros(soil_water_content_m3_m3.size, dtype=soil_water_content_m3_m3.dtype)
+    mavail[soil_water_content_m3_m3 >= field_capacity] = 1
+    mavail[soil_water_content_m3_m3 < field_capacity] = 0.25 * (1 -
+        np.cos(soil_water_content_m3_m3[soil_water_content_m3_m3 < field_capacity] * np.pi / field_capacity)) ** 2
+    return mavail
+
+
+def saturation_vapor_pressure(temperature_K):
+    """
+    Calculate saturation vapor pressure from Clausius-Clapeyron equation in A First Course in
+    Atmospheric Thermodynamics by Grant W. Petty
+
+    Args:
+        temperature_K: Temperature in Kelvin
+
+    Returns:
+        saturation vapor pressure in hPa
+    """
+    Rv = 461.0
+    T0 = 273.0
+    es0 = 6.11
+    L = 2.5e6
+    return es0 * np.exp(L / Rv * (1 / T0 - 1 / temperature_K))
+
+
+def saturation_mixing_ratio(temperature_K, pressure_hPa):
+    """
+    Calculate saturation mixing ratio from temperature and pressure
+
+    Args:
+        temperature_K: temperature in Kelvin
+        pressure_hPa: pressure in hPA
+
+    Returns:
+        saturation mixing ratio in g kg-1
+    """
+    es = saturation_vapor_pressure(temperature_K)
+    epsilon = 0.622
+    return epsilon * es / (pressure_hPa - es) * 1000.0
