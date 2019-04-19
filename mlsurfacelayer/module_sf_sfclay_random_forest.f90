@@ -172,6 +172,7 @@ contains
                 psix, psix2, psix10, psit, psit2, zl2, zl10, zol_0, zol_2, zol_10, zol_z_a
         real, dimension(11) :: ust_rf_inputs
         real, dimension(12) :: tstar_rf_inputs
+        real, dimension(14) :: qstar_rf_inputs
         integer:: i, k
         do i = its, ite
             ! Calculate derived variables
@@ -201,10 +202,14 @@ contains
                     skin_virtual_potential_temperature, qsfc(i) * 1000.0, swdown(i), &
                     virtual_potential_temperature(kts), virtual_potential_temperature(kstop), &
                     mavail(i), br(i), zenith /)
+            qstar_rf_inputs = (/ wind_speed(kts), wind_speed(kstop), psfc(i), d_vpt_d_z, &
+                    skin_virtual_potential_temperature, qsfc(i) * 1000.0, swdown(i), &
+                    virtual_potential_temperature(kts), virtual_potential_temperature(kstop), &
+                    mavail(i), br(i), zenith, qv_2d(i, kts), qv_2d(i, kstop) /)
             ! Run random forests to get ust, mol, and qstar
             ust(i) = random_forest_predict(real(ust_rf_inputs, 8), rf_sfc%friction_velocity)
             mol(i) = random_forest_predict(real(tstar_rf_inputs, 8), rf_sfc%temperature_scale)
-            qstar(i) = random_forest_predict(real(tstar_rf_inputs, 8), rf_sfc%moisture_scale) / 1000.0
+            qstar(i) = random_forest_predict(real(qstar_rf_inputs, 8), rf_sfc%moisture_scale) / 1000.0
             !print*, "rf outputs", ust(i), mol(i), qstar(i)
             ! Calculate diagnostics
             zol(i) = karman * grav / potential_temperature(kts) * z_a * mol(i) / (ust(i) * ust(i))
