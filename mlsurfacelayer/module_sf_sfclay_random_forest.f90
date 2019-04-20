@@ -205,7 +205,7 @@ contains
             qstar_rf_inputs = (/ wind_speed(kts), wind_speed(kstop), psfc(i), d_vpt_d_z, &
                     skin_virtual_potential_temperature, qsfc(i) * 1000.0, swdown(i), &
                     virtual_potential_temperature(kts), virtual_potential_temperature(kstop), &
-                    mavail(i), br(i), zenith, qv_2d(i, kts), qv_2d(i, kstop) /)
+                    mavail(i), br(i), zenith, qv_2d(i, kts) * 1000.0, qv_2d(i, kstop) * 1000.0 /)
             ! Run random forests to get ust, mol, and qstar
             ust(i) = random_forest_predict(real(ust_rf_inputs, 8), rf_sfc%friction_velocity)
             mol(i) = random_forest_predict(real(tstar_rf_inputs, 8), rf_sfc%temperature_scale)
