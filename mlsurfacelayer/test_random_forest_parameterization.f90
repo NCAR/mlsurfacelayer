@@ -46,8 +46,8 @@ program test_random_forest_parameterization
     xland = 1.0
     tsk = 275.0
     psfc = 101325.00
-    swdown = 0.0
-    coszen = 1.0
+    swdown = 500.0
+    coszen = 30.0
     regime = 0.0
     br = -1.0
     ust = 5
