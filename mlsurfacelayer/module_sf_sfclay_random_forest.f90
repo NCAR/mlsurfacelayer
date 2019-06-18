@@ -312,9 +312,9 @@ contains
             cd(i) = (vonkarman / psix10) * (vonkarman / psix10)
             cka(i) = (vonkarman / psix) * (vonkarman / psiq)
             cda(i) = (vonkarman / psix) * (vonkarman / psix)
-            chs(i) = ust(i) * mol(i) / (potential_temperature(1) - skin_potential_temperature)
+            chs(i) = ust(i) * mol(i) / (skin_potential_temperature - potential_temperature(1))
             cqs2(i) = ust(i) * qstar(i) / (qv_2d(i, kts) - qsfc(i))
-            chs2(i) = ust(i) * mol(i) / (th2(i) - skin_potential_temperature)
+            chs2(i) = ust(i) * mol(i) / (skin_potential_temperature - th2(i))
             ! Calculate fluxes and exchange coefficients
             rho = psfc(i) / (r_dry * t_2d(i, kts))
             cpm = c_p * (1.0 + 0.8 * qv_2d(i, kts))
