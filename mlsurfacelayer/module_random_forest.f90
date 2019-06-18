@@ -1,4 +1,4 @@
-module random_forest
+module module_random_forest
     implicit none
 
     type decision_tree
@@ -118,4 +118,4 @@ module random_forest
             end if
         end do
     end function decision_tree_predict
-end module random_forest
+end module module_random_forest
