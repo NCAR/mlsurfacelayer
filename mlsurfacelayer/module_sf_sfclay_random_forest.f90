@@ -224,7 +224,7 @@ contains
             zol(i) = vonkarman * grav / potential_temperature(kts) * z_a * mol(i) / (ust(i) * ust(i))
 
             if (zol(i) .lt. -10.) then
-                zol(i) = -10.
+                zol(i) = -1.
             endif
 
             if (zol(i) .gt. 1.) then
@@ -312,16 +312,16 @@ contains
             cd(i) = (vonkarman / psix10) * (vonkarman / psix10)
             cka(i) = (vonkarman / psix) * (vonkarman / psiq)
             cda(i) = (vonkarman / psix) * (vonkarman / psix)
-            chs(i) = ust(i) * mol(i) / (skin_potential_temperature - potential_temperature(1))
-            cqs2(i) = ust(i) * qstar(i) / (qv_2d(i, kts) - qsfc(i))
-            chs2(i) = ust(i) * mol(i) / (skin_potential_temperature - th2(i))
+            chs(i) = ust(i) * mol(i) / (potential_temperature(1) - skin_potential_temperature)
+            cqs2(i) = ust(i) * qstar(i) / (qsfc(i) - qv_2d(i, kts))
+            chs2(i) = ust(i) * mol(i) / (th2(i) - skin_potential_temperature)
             ! Calculate fluxes and exchange coefficients
             rho = psfc(i) / (r_dry * t_2d(i, kts))
             cpm = c_p * (1.0 + 0.8 * qv_2d(i, kts))
             hfx(i) = -cpm * rho * ust(i) * mol(i)
-            flhc(i) = hfx(i) / (skin_virtual_potential_temperature - virtual_potential_temperature(kts))
+            flhc(i) = hfx(i) / (virtual_potential_temperature(kts) - skin_virtual_potential_temperature)
             qfx(i) = rho * ust(i) * qstar(i)
-            flqc(i) = qfx(i) / (qv_2d(i, kts) - qsfc(i))
+            flqc(i) = qfx(i) / (qsfc(i) - qv_2d(i, kts))
             lh(i) = x_lv * qfx(i) 
             print*, 'qstar', qstar(i), qfx(i), lh(i), flqc(i), cqs2(i)
         end do
