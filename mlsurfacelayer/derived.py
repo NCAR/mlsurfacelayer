@@ -204,7 +204,7 @@ def saturation_vapor_pressure(temperature_K):
         temperature_K: Temperature in Kelvin
 
     Returns:
-        saturation vapor pressure in hPa
+        saturation vapor pressure in hPa/q2//q2
     """
     Rv = 461.0
     T0 = 273.0
