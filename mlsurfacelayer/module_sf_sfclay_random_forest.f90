@@ -175,9 +175,11 @@ contains
                 skin_saturation_vapor_pressure, skin_virtual_potential_temperature, total_dz, z_a, rho, cpm, &
                 gz1_o_z0, gz2_o_z0, gz10_o_z0, pq, pq2, pq10, psih2, psim2, psih10, psim10, psiq, psiq2, psiq10, zl, &
                 psix, psix2, psix10, psit, psit2, zl2, zl10, zol_0, zol_2, zol_10, zol_z_a
-        real, dimension(11) :: ust_rf_inputs
-        real, dimension(12) :: tstar_rf_inputs
-        real, dimension(14) :: qstar_rf_inputs
+        real :: pot_temp_diff, qv_diff, pot_temp_skin_diff_1, pot_temp_skin_diff_2
+        real :: qv_skin_diff_1, qv_skin_diff_2
+        real, dimension(6) :: ust_rf_inputs
+        real, dimension(7) :: tstar_rf_inputs
+        real, dimension(10) :: qstar_rf_inputs
         REAL, PARAMETER :: pi_val = 3.1415927
         integer:: i, k
         do i = its, ite
@@ -200,22 +202,29 @@ contains
             qsfc(i) = eps * skin_saturation_vapor_pressure / (psfc(i) - skin_saturation_vapor_pressure)
             skin_potential_temperature = tsk(i) * (psfc(i) / p_1000mb) ** r_over_cp
             skin_virtual_potential_temperature = skin_potential_temperature * (1. + 0.61 * qsfc(i))
-            br(i) = grav / virtual_potential_temperature(kts) * dz_2d(i, kts) * &
+            br(i) = grav / potential_temperature(kts) * dz_2d(i, kts) * &
                     (virtual_potential_temperature(kts) - skin_virtual_potential_temperature) / (wind_speed(kts) * wind_speed(kts))
-
+            pot_temp_skin_diff_1 = (skin_potential_temperature - potential_temperature(kts)) / (dz_2d(i, kts))
+            pot_temp_skin_diff_2 = (skin_potential_temperature - potential_temperature(kstop)) / (dz_2d(i, kstop) + dz_2d(i, kts))
+            qv_skin_diff_1 = (qsfc(i) - qv_2d(i, kts)) / (dz_2d(i, kts)) * 1000.0
+            qv_skin_diff_2 = (qsfc(i) - qv_2d(i, kstop)) / (dz_2d(i, kstop) + dz_2d(i, kts)) * 1000.0
             ! Input variables into random forest input arrays
-            ust_rf_inputs = (/ wind_speed(kts), wind_speed(kstop), psfc(i), d_vpt_d_z, &
-                    skin_virtual_potential_temperature, qsfc(i) * 1000.0, swdown(i), &
-                    virtual_potential_temperature(kts), virtual_potential_temperature(kstop), &
-                    br(i), zenith /)
-            tstar_rf_inputs = (/ wind_speed(kts), wind_speed(kstop), psfc(i), d_vpt_d_z, &
-                    skin_virtual_potential_temperature, qsfc(i) * 1000.0, swdown(i), &
-                    virtual_potential_temperature(kts), virtual_potential_temperature(kstop), &
-                    mavail(i), br(i), zenith /)
-            qstar_rf_inputs = (/ wind_speed(kts), wind_speed(kstop), psfc(i), d_vpt_d_z, &
-                    skin_virtual_potential_temperature, qsfc(i) * 1000.0, swdown(i), &
-                    virtual_potential_temperature(kts), virtual_potential_temperature(kstop), &
-                    mavail(i), br(i), zenith, qv_2d(i, kts), qv_2d(i, kstop) /)
+            !ust_rf_inputs = (/ wind_speed(kts), wind_speed(kstop), psfc(i) / 100.0, d_vpt_d_z, &
+            !        skin_virtual_potential_temperature, swdown(i), &
+            !        virtual_potential_temperature(kts), virtual_potential_temperature(kstop), &
+            !        br(i), zenith /)
+            !tstar_rf_inputs = (/ wind_speed(kts), wind_speed(kstop), psfc(i) / 100.0, d_vpt_d_z, &
+            !        skin_virtual_potential_temperature, qsfc(i) * 1000.0, swdown(i), &
+            !        virtual_potential_temperature(kts), virtual_potential_temperature(kstop), &
+            !        mavail(i), br(i), zenith /)
+            !qstar_rf_inputs = (/ wind_speed(kts), wind_speed(kstop), psfc(i) / 100.0, d_vpt_d_z, &
+            !        skin_virtual_potential_temperature, qsfc(i) * 1000.0, swdown(i), &
+            !        virtual_potential_temperature(kts), virtual_potential_temperature(kstop), &
+            !        mavail(i), br(i), zenith, qv_2d(i, kts) * 1000.0, qv_2d(i, kstop) * 1000.0 /)
+            ust_rf_inputs = (/ wind_speed(kts), wind_speed(kstop), pot_temp_skin_diff_1, br(i), swdown(i), zenith /)
+            tstar_rf_inputs = (/ pot_temp_skin_diff_1, pot_temp_skin_diff_2, br(i), swdown(i), zenith, wspd(kts), wind_speed(kstop) /)
+            qstar_rf_inputs = (/ qv_skin_diff_1, qv_skin_diff_2, pot_temp_skin_diff_1, pot_temp_skin_diff_2, br(i), swdown(i), zenith, wspd(kts), wind_speed(kstop) /)
+
             ! Run random forests to get ust, mol, and qstar
             ust(i) = random_forest_predict(real(ust_rf_inputs, 8), rf_sfc%friction_velocity)
             mol(i) = random_forest_predict(real(tstar_rf_inputs, 8), rf_sfc%temperature_scale)
@@ -298,11 +307,10 @@ contains
             ! ahw: mods to compute ck, cd
             psiq10 = alog(vonkarman * ust(i) * 10. / xka + 10. / zl) - pq10
             ! Calculate 10 and 2 m diagnostics
-            u10(i) = u_2d(i, kts) * psix10 / psix
-            v10(i) = v_2d(i, kts) * psix10 / psix
-            th2(i) = skin_potential_temperature + (potential_temperature(kts) - skin_potential_temperature) * psit2 / psit
-            t2(i) = th2(i) * (psfc(i) / p_1000mb) ** r_over_cp
-            q2(i) = qsfc(i) + (qv_2d(i, kts) - qsfc(i)) * psiq2 / psiq
+            u10(i) = u_2d(i, kts)
+            v10(i) = v_2d(i, kts)
+            q2(i) = qv_2d(i, kts)
+            !q2(i) = qsfc(i) + (qv_2d(i, kts) - qsfc(i)) * psiq2 / psiq
             fm(i) = psix
             fh(i) = psit
             !chs(i) = ust(i) * vonkarman / psiq
@@ -312,18 +320,41 @@ contains
             cd(i) = (vonkarman / psix10) * (vonkarman / psix10)
             cka(i) = (vonkarman / psix) * (vonkarman / psiq)
             cda(i) = (vonkarman / psix) * (vonkarman / psix)
-            chs(i) = ust(i) * mol(i) / (potential_temperature(1) - skin_potential_temperature)
-            cqs2(i) = ust(i) * qstar(i) / (qsfc(i) - qv_2d(i, kts))
-            chs2(i) = ust(i) * mol(i) / (th2(i) - skin_potential_temperature)
+            pot_temp_diff = potential_temperature(kts) - skin_potential_temperature 
+            qv_diff = qsfc(i) - qv_2d(i, kts)
+            if (abs(pot_temp_diff) < 0.1) then
+                if (pot_temp_diff > 0) then
+                    pot_temp_diff = 0.1
+                else
+                    pot_temp_diff = -0.1
+                end if
+            end if
+            if (abs(qv_diff) < 0.1) then
+                if (qv_diff > 0) then
+                    qv_diff = 0.1
+                else
+                    qv_diff = -0.1
+                end if
+            end if
+
+            th2(i) = skin_potential_temperature + pot_temp_diff * psit2 / psit
+            t2(i) = th2(i) * (psfc(i) / p_1000mb) ** r_over_cp
+            chs(i) = abs(ust(i) * mol(i) / pot_temp_diff)
+            !chs(i) = abs(ust(i) * qstar(i) / qv_diff)
+
+            cqs2(i) = ust(i) * qstar(i) / qv_diff
+            chs2(i) = ust(i) * mol(i) / pot_temp_diff
             ! Calculate fluxes and exchange coefficients
             rho = psfc(i) / (r_dry * t_2d(i, kts))
-            cpm = c_p * (1.0 + 0.8 * qv_2d(i, kts))
-            hfx(i) = -cpm * rho * ust(i) * mol(i)
-            flhc(i) = hfx(i) / (virtual_potential_temperature(kts) - skin_virtual_potential_temperature)
+            !cpm = c_p * (1.0 + 0.8 * qv_2d(i, kts))
+            hfx(i) = -c_p * rho * ust(i) * mol(i)
+            flhc(i) = hfx(i) / pot_temp_diff
             qfx(i) = rho * ust(i) * qstar(i)
-            flqc(i) = qfx(i) / (qsfc(i) - qv_2d(i, kts))
+            flqc(i) = qfx(i) / qv_diff
             lh(i) = x_lv * qfx(i) 
-            print*, 'qstar', qstar(i), qfx(i), lh(i), flqc(i), cqs2(i)
+            !if (i == 1) then
+            !    print*, "chs", chs(i), "chs2", chs2(i), "ptd", pot_temp_diff
+            !end if
         end do
     end subroutine sfclay_random_forest_2d
 

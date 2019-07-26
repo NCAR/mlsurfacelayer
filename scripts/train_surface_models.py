@@ -43,7 +43,11 @@ def main():
     derived_columns = config["derived_columns"]
     model_configs = config["model_config"]
     model_metric_types = config["model_metric_types"]
-    data = load_derived_data(data_file, train_test_split_date)
+    if "filter_counter_gradient" in config.keys():
+        filter_counter_gradient = config["filter_counter_gradient"]
+    else:
+        filter_counter_gradient = False
+    data = load_derived_data(data_file, train_test_split_date, filter_counter_gradient=filter_counter_gradient)
     model_objects = dict()
     pred_columns = []
     for output_type in output_types:

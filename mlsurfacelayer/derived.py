@@ -161,7 +161,7 @@ def obukhov_length(potential_temperature_k, temperature_scale_k, friction_veloci
             von_karman_constant * g * adjusted_temperature_scale)
 
 
-def skin_temperature(upward_longwave_irradiance_W_m2, emissivity=0.97):
+def skin_temperature(upward_longwave_irradiance_W_m2, emissivity=1.0):
     """
     Calculates the radiative skin temperature from the upward longwave irradiance.
 
