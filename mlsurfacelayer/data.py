@@ -6,7 +6,7 @@ from pvlib.solarposition import get_solarposition
 
 
 def process_cabauw_data(csv_path, out_file, nan_column=("soil_water", "TH03"), cabauw_lat=51.971, cabauw_lon=4.926,
-                        elevation=-0.7):
+                        elevation=-0.7, reflect_counter_gradient=False):
     """
     This function loads all of the cabauw data files and then calculates the relevant derived quantities necessary
     to build the machine learning parameterization.
@@ -23,6 +23,7 @@ def process_cabauw_data(csv_path, out_file, nan_column=("soil_water", "TH03"), c
         cabauw_lat: Latitude of tower site in degrees.
         cabauw_lon: Longitude of tower site in degrees.
         elevation: Elevation of site in meters.
+        reflect_counter_gradient: Change the sign of counter gradient sensible and latent heat flux values.
     Returns:
         `pandas.DataFrame` containing derived data.
     """
@@ -183,10 +184,21 @@ def process_cabauw_data(csv_path, out_file, nan_column=("soil_water", "TH03"), c
     derived_data["sensible heat flux_surface_W m-2"] = combined_data[("flux", "H")]
     derived_data["latent heat flux_surface_W m-2"] = combined_data[("flux", "LE")]
     derived_data["soil heat flux_surface_W m-2"] = combined_data[("flux", "G0")]
-    derived_data["temperature scale_surface_K"] = temperature_scale(combined_data[("flux", "H")],
+    if reflect_counter_gradient:
+        sh_counter_gradient = (derived_data[f"potential temperature skin change_10 m_K m-1"] *
+                               derived_data["sensible heat flux_surface_W m-2"]) < 0
+        lh_counter_gradient = (derived_data[f"mixing ratio skin change_10 m_g kg-1 m-1"] *
+                               derived_data["latent heat flux_surface_W m-2"]) < 0
+        derived_data.loc[sh_counter_gradient,
+                         "sensible heat flux_surface_W m-2"] = -derived_data.loc[sh_counter_gradient,
+                                                                                 "sensible heat flux_surface_W m-2"]
+        derived_data.loc[lh_counter_gradient,
+                         "latent heat flux_surface_W m-2"] = -derived_data.loc[lh_counter_gradient,
+                                                                               "latent heat flux_surface_W m-2"]
+    derived_data["temperature scale_surface_K"] = temperature_scale(derived_data["sensible heat flux_surface_W m-2"],
                                                                     derived_data["air density_10 m_kg m-3"],
                                                                     derived_data["friction velocity_surface_m s-1"])
-    derived_data["moisture scale_surface_g kg-1"] = moisture_scale(combined_data[("flux", "LE")],
+    derived_data["moisture scale_surface_g kg-1"] = moisture_scale(derived_data["latent heat flux_surface_W m-2"],
                                                                    derived_data["air density_10 m_kg m-3"],
                                                                    derived_data["friction velocity_surface_m s-1"])
     derived_data["bulk richardson_10 m_"] = bulk_richardson_number(derived_data["potential temperature_10 m_K"],

@@ -1,6 +1,6 @@
-data_file: "/Users/dgagne/data/cabauw_derived_data_20190712.csv"
-out_dir: "/Users/dgagne/data/cabauw_surface_layer_models_20190725/"
-filter_counter_gradient: 1
+data_file: "/Users/dgagne/data/cabauw_derived_data_20190731.csv"
+out_dir: "/Users/dgagne/data/cabauw_surface_layer_models_20190731/"
+filter_counter_gradient: 0
 train_test_split_date: "2011-01-01"
 output_types: ["friction_velocity", "temperature_scale", "moisture_scale"]
 model_metric_types: ["mean_squared_error", "mean_absolute_error", "mean_error", "pearson_r2", "hellinger_distance"]
