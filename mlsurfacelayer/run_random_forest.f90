@@ -6,7 +6,7 @@ program run_random_forest
     real(kind=8) :: input_data(15)
     real(kind=8) :: prediction
     integer :: n, num_trees
-    file_path = "/Users/dgagne/mlsurfacelayer/ustar_rf/"
+    file_path = "/Users/dgagne/mlsurfacelayer/qstar_rf/"
     call load_random_forest(file_path, rf)
     open(345, file="test_input.csv")
     read(345, "(A)")

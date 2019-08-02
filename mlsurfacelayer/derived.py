@@ -161,7 +161,7 @@ def obukhov_length(potential_temperature_k, temperature_scale_k, friction_veloci
             von_karman_constant * g * adjusted_temperature_scale)
 
 
-def skin_temperature(upward_longwave_irradiance_W_m2, emissivity=0.97):
+def skin_temperature(upward_longwave_irradiance_W_m2, emissivity=1.0):
     """
     Calculates the radiative skin temperature from the upward longwave irradiance.
 
@@ -204,7 +204,7 @@ def saturation_vapor_pressure(temperature_K):
         temperature_K: Temperature in Kelvin
 
     Returns:
-        saturation vapor pressure in hPa
+        saturation vapor pressure in hPa/q2//q2
     """
     Rv = 461.0
     T0 = 273.0
