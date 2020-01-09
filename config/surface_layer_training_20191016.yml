@@ -1,0 +1,75 @@
+data_file: "/Users/dgagne/data/cabauw_derived_data_20191021_30min_raw.csv"
+out_dir: "/Users/dgagne/data/cabauw_surface_layer_models_20191105/"
+filter_counter_gradient: 0
+train_test_split_date: "2013-01-01"
+output_types: ["friction_velocity", "temperature_scale", "moisture_scale"]
+model_metric_types: ["mean_squared_error", "mean_absolute_error", "mean_error", "pearson_r2", "hellinger_distance"]
+input_columns:
+  friction_velocity: ["wind speed_10 m_m s-1",
+                      "wind speed_20 m_m s-1",
+                      "potential temperature skin change_10 m_K m-1",
+                      "mixing ratio skin change_10 m_g kg-1 m-1",
+                      "bulk richardson_10 m_",
+                      "zenith_0 m_degrees",
+                      "u wind_10 m_m s-1",
+                      "v wind_10 m_m s-1",
+                      "u wind_20 m_m s-1",
+                      "v wind_20 m_m s-1",
+                      "global horizontal irradiance_0 m_W m-2",
+                       "relative humidity_10 m_%",
+                       "relative humidity_20 m_%"]
+  temperature_scale: ["mixing ratio skin change_10 m_g kg-1 m-1",
+                      "mixing ratio skin change_20 m_g kg-1 m-1",
+                      "potential temperature skin change_10 m_K m-1",
+                      "potential temperature skin change_20 m_K m-1",
+                      "bulk richardson_10 m_",
+                      "wind speed_10 m_m s-1",
+                      "wind speed_20 m_m s-1",
+                      "u wind_10 m_m s-1",
+                      "v wind_10 m_m s-1",
+                      "u wind_20 m_m s-1",
+                      "v wind_20 m_m s-1",
+                      "zenith_0 m_degrees",
+                      "global horizontal irradiance_0 m_W m-2",
+                      "relative humidity_10 m_%",
+                      "relative humidity_20 m_%"]
+  moisture_scale: ["mixing ratio skin change_10 m_g kg-1 m-1",
+                   "mixing ratio skin change_20 m_g kg-1 m-1",
+                   "potential temperature skin change_10 m_K m-1",
+                   "potential temperature skin change_20 m_K m-1",
+                   "bulk richardson_10 m_",
+                   "wind speed_10 m_m s-1",
+                   "wind speed_20 m_m s-1",
+                   "u wind_10 m_m s-1",
+                   "v wind_10 m_m s-1",
+                   "u wind_20 m_m s-1",
+                   "v wind_20 m_m s-1",
+                   "zenith_0 m_degrees",
+                   "global horizontal irradiance_0 m_W m-2",
+                   "moisture availability_3 cm_"]
+output_columns:
+  friction_velocity: "friction velocity_surface_m s-1"
+  temperature_scale: "temperature scale_surface_K"
+  moisture_scale: "moisture scale_surface_g kg-1"
+derived_columns: ["sensible heat flux_surface_W m-2",
+                  "latent heat flux_surface_W m-2",
+                  "bulk richardson_10 m_",
+                  "air density_10 m_kg m-3",
+                  "obukhov length_surface_m"]
+stability_column: "bulk richardson_10 m_"
+model_config:
+  random_forest:
+    n_estimators: 100
+    max_features: 6
+    n_jobs: 4
+    max_leaf_nodes: 1024
+  neural_network:
+    hidden_layers: 2
+    hidden_neurons: 64
+    batch_size: 512
+    epochs: 10
+    lr: 0.0001
+    activation: tanh
+    l2_weight: 0.0
+
+
