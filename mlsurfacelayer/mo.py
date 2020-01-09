@@ -72,7 +72,7 @@ def mo_similarity(u10, v10, tsk, t2, qsfc, q2, psfc, mavail=1, z0=0.01, zt0=0.00
     # Initial values of drag coefficients - neutrally stratified case
     cd = karman ** 2 / ((log(z10oz0)) ** 2)
     ch = karman ** 2 / ((log(z2ozt0)) ** 2)
-    cq = karman ** 2 / ((log(z2oz0)) ** 2)
+    cq = karman ** 2 / ((log(z2ozt0)) ** 2)
     #
     # Initial values of surface friction velocity, temperature scale, and
     # heat flux
@@ -132,7 +132,7 @@ def mo_similarity(u10, v10, tsk, t2, qsfc, q2, psfc, mavail=1, z0=0.01, zt0=0.00
             phih2 = 1.
             cd = karman ** 2 / ((log(z10oz0)) ** 2)
             ch = karman ** 2 / ((log(z2ozt0)) ** 2)
-            cq = karman ** 2 / ((log(z2oz0)) ** 2)
+            cq = karman ** 2 / ((log(z2ozt0)) ** 2)
         elif abs(wthv0) > 0:
             #
             # Obukhov length scale
@@ -183,7 +183,7 @@ def mo_similarity(u10, v10, tsk, t2, qsfc, q2, psfc, mavail=1, z0=0.01, zt0=0.00
             #
             cd = karman ** 2 / ((log(z10oz0) - psim10) ** 2)
             ch = karman ** 2 / ((log(z2ozt0) - psim2) * (log(z2ozt0) - psih2))
-            cq = karman ** 2 / ((log(z2oz0) - psim2) * (log(z2oz0) - psiq2))
+            cq = karman ** 2 / ((log(z2ozt0) - psim2) * (log(z2ozt0) - psiq2))
         #
         diff = abs(cd - cdold) + abs(ch - chold) + abs(cq - cqold)
         count += 1

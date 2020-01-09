@@ -4,6 +4,24 @@ import os
 from os.path import exists, join
 
 
+def save_scaler_csv(scaler_obj, input_columns, output_file):
+    """
+    Save the scaler information to csv so that it can be read later.
+
+    Args:
+        scaler_obj: Scikit-learn StandardScaler object
+        input_columns:
+        output_file:
+
+    Returns:
+
+    """
+    input_scaler_df = pd.DataFrame({"mean": scaler_obj.mean_, "scale": scaler_obj.scale_},
+                                   index=input_columns)
+    input_scaler_df.to_csv(output_file, index_label="input")
+    return input_scaler_df
+
+
 def save_random_forest_csv(random_forest_model, features, out_path, forest_name="random_forest"):
     """
     Converts a scikit-learn random forest object into a set of csv files for each tree in the forest. If the

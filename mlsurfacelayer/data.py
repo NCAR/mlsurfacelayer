@@ -6,7 +6,7 @@ from pvlib.solarposition import get_solarposition
 
 
 def process_cabauw_data(csv_path, out_file, nan_column=("soil_water", "TH03"), cabauw_lat=51.971, cabauw_lon=4.926,
-                        elevation=-0.7, reflect_counter_gradient=False):
+                        elevation=-0.7, reflect_counter_gradient=False, average_period=None):
     """
     This function loads all of the cabauw data files and then calculates the relevant derived quantities necessary
     to build the machine learning parameterization.
@@ -24,6 +24,7 @@ def process_cabauw_data(csv_path, out_file, nan_column=("soil_water", "TH03"), c
         cabauw_lon: Longitude of tower site in degrees.
         elevation: Elevation of site in meters.
         reflect_counter_gradient: Change the sign of counter gradient sensible and latent heat flux values.
+        average_period: Window obs are averaged over.
     Returns:
         `pandas.DataFrame` containing derived data.
     """
@@ -219,6 +220,9 @@ def process_cabauw_data(csv_path, out_file, nan_column=("soil_water", "TH03"), c
     derived_data["obukhov length_surface_m"] = obukhov_length(derived_data["potential temperature_10 m_K"],
                                                               derived_data["temperature scale_surface_K"],
                                                               derived_data["friction velocity_surface_m s-1"])
+    if average_period is not None:
+        derived_data = derived_data.rolling(window=average_period).mean()
+        derived_data = derived_data.dropna()
     derived_data.to_csv(out_file, columns=derived_columns, index_label="Time")
     return derived_data
 
