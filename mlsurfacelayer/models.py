@@ -40,9 +40,12 @@ def save_random_forest_csv(random_forest_model, features, out_path, forest_name=
     feature_frame = pd.DataFrame(features, columns=["feature"])
     feature_frame.to_csv(join(out_path, forest_name, f"{forest_name}_features.csv"), index_label="Index")
     rf_frames = random_forest_dataframes(random_forest_model, features)
-    for r, rf_frame in enumerate(rf_frames):
-        rf_frame.to_csv(join(out_path, forest_name, f"{forest_name}_tree_{r:04d}.csv"), float_format='%1.16e',
-                        index_label="Node")
+    with open(join(out_path, forest_name, "tree_files.csv"), "w") as tree_file:
+        for r, rf_frame in enumerate(rf_frames):
+            tree_name = f"{forest_name}_tree_{r:04d}.csv"
+            rf_frame.to_csv(join(out_path, forest_name, tree_name), float_format='%1.16e',
+                            index_label="Node")
+            tree_file.write(tree_name + "\n")
     return
 
 
