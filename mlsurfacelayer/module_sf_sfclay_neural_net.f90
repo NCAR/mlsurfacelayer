@@ -28,11 +28,8 @@ module module_sf_sfclay_neural_net
 
 contains
 
-    subroutine init_sfclay_neural_net(friction_velocity_path, &
-            temperature_scale_path, moisture_scale_path)
-        character(len=*), intent(in) :: friction_velocity_path
-        character(len=*), intent(in) :: temperature_scale_path
-        character(len=*), intent(in) :: moisture_scale_path
+    subroutine init_sfclay_neural_net(neural_net_path)
+        character(len=*), intent(in) :: neural_net_path
         integer :: friction_velocity_num_inputs, temperature_scale_num_inputs, moisture_scale_num_inputs, batch_size
 
         friction_velocity_num_inputs = 13
@@ -44,17 +41,17 @@ contains
         allocate(nn_sfc%temperature_scale_scale_values(temperature_scale_num_inputs, 2))
         allocate(nn_sfc%moisture_scale_scale_values(moisture_scale_num_inputs, 2))
 
-        call load_scale_values(friction_velocity_path // "friction_velocity_scale_values.csv", &
+        call load_scale_values(neural_net_path // "friction_velocity_scale_values.csv", &
             friction_velocity_num_inputs, nn_sfc%friction_velocity_scale_values)
-        call load_scale_values(temperature_scale_path // "temperature_scale_scale_values.csv", &
+        call load_scale_values(neural_net_path // "temperature_scale_scale_values.csv", &
             temperature_scale_num_inputs, nn_sfc%temperature_scale_scale_values)
-        call load_scale_values(moisture_scale_path // "moisture_scale_scale_values.csv", &
+        call load_scale_values(neural_net_path // "moisture_scale_scale_values.csv", &
             moisture_scale_num_inputs, nn_sfc%moisture_scale_scale_values)
-        call init_neural_net(friction_velocity_path // "friction_velocity-neural_network_fortran.nc", &
+        call init_neural_net(neural_net_path // "friction_velocity-neural_network_fortran.nc", &
             batch_size, nn_sfc%friction_velocity)
-        call init_neural_net(temperature_scale_path // "temperature_scale-neural_network_fortran.nc", &
+        call init_neural_net(neural_net_path // "temperature_scale-neural_network_fortran.nc", &
             batch_size, nn_sfc%temperature_scale)
-        call init_neural_net(moisture_scale_path // "moisture_scale-neural_network_fortran.nc", &
+        call init_neural_net(neural_net_path // "moisture_scale-neural_network_fortran.nc", &
             batch_size, nn_sfc%moisture_scale)
     end subroutine init_sfclay_neural_net
 
