@@ -196,7 +196,7 @@ contains
                 virtual_potential_temperature(k) = potential_temperature(k) * (1. + 0.61 * qv_2d(i, k))
                 wind_speed(k) = sqrt(u_2d(i, k) ** 2. + v_2d(i, k) ** 2.)
                 saturation_vapor_pressure(k) = e_s_o * exp(x_lv / r_v * (1.0 / 273.0 - 1. / t_2d(i, k)))
-                saturation_mixing_ratio(k) = eps * skin_saturation_vapor_pressure / (psfc(i) - skin_saturation_vapor_pressure)
+                saturation_mixing_ratio(k) = eps * saturation_vapor_pressure(k) / (p_2d(i, k) - saturation_vapor_pressure(k))
                 relative_humidity(k) = qv_2d(i, k) / saturation_mixing_ratio(k) * 100.0
                 if (wind_speed(k) < 0.1) then
                     wind_speed(k) = 0.1
@@ -328,7 +328,6 @@ contains
             cda(i) = (vonkarman / psix) * (vonkarman / psix)
             pot_temp_diff = potential_temperature(kts) - skin_potential_temperature 
             qv_diff = qsfc(i) - qv_2d(i, kts)
-            print*, "diffs", pot_temp_diff, qv_diff
             th2(i) = skin_potential_temperature + pot_temp_diff * psit2 / psit
             t2(i) = th2(i) * (psfc(i) / p_1000mb) ** r_over_cp
             chs(i) = abs(ust(i) * mol(i) / pot_temp_diff)
@@ -346,10 +345,6 @@ contains
             flqc(i) = rho * mavail(i) * ust(i) * qstar(i) / qv_diff 
             qfx(i) = flqc(i) * qv_diff
             lh(i) = x_lv * qfx(i)
-            print*, "hfx", hfx(i), "lh", lh(i)
-            !if (i == 1) then
-            !    print*, "chs", chs(i), "chs2", chs2(i), "ptd", pot_temp_diff
-            !end if
         end do
     end subroutine sfclay_random_forest_2d
 
