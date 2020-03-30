@@ -22,7 +22,9 @@ Moving trained models to WRF
 
 Adding a new machine learning parameterization to WRF
 =====================================================
-#. Add constants to :code:`frame/module_state_description.F` for each machine learning parameterization and ensure
+#. Add constants to :code:`Registry/Registry.EM_common` for each machine learning parameterization and ensure
    they do not clash with other constants for the same parameterization type.
 #. Modify :code:`phys/module_physics_init.F` to call the init subroutine to load your machine learning models.
 #. Modify :code:`phys/module_surface_driver.F` to call the machine learning surface layer parameterization subroutine.
+#. Edit :code:`phys/Makefile` to add the new modules to the compilation list.
+#. Compile WRF.
