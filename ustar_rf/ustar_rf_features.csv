@@ -1,0 +1,16 @@
+Index,feature
+0,global horizontal irradiance_0 m_W m-2
+1,zenith_0 m_degrees
+2,azimuth_0 m_degrees
+3,pressure_2 m_hPa
+4,potential temperature_10 m_K
+5,potential temperature_2 m_K
+6,mixing ratio_10 m_g kg-1
+7,relative humidity_10 m_%
+8,air density_10 m_kg m-3
+9,wind speed_10 m_m s-1
+10,wind speed_20 m_m s-1
+11,wind speed_40 m_m s-1
+12,mixing ratio_2 m_g kg-1
+13,relative humidity_2 m_%
+14,bulk richardson_10-2 m_

@@ -118,9 +118,8 @@ contains
                 v_2d, &
                 qv_2d, &
                 t_2d, &
-                dz_2d
-
-        real, dimension(its:ite) :: p_1d
+                dz_2d, &
+                p_2d
 
         integer :: i, j, k, kstop
 
@@ -133,11 +132,12 @@ contains
                     qv_2d(i, k) = qv_3d(i, k, j)
                     t_2d(i, k) = t_3d(i, k, j)
                     dz_2d(i, k) = dz_3d(i, k, j)
+                    p_2d(i, k) = p_3d(i, k, j)
+
                 end do
-                p_1d(i) = p_3d(i, kts, j)
             end do
             call sfclay_random_forest_2d(its, ite, kts, kstop, &
-                    u_2d, v_2d, qv_2d, t_2d, dz_2d, p_1d, &
+                    u_2d, v_2d, qv_2d, t_2d, dz_2d, p_2d, &
                     mavail(its:ite, j), xland(its:ite, j), tsk(its:ite, j), psfc(its:ite, j), &
                     swdown(its:ite, j), coszen(its:ite, j), wspd(its:ite, j), &
                     regime(its:ite, j), br(its:ite, j), ust(its:ite, j), znt(its:ite, j), &
@@ -153,7 +153,7 @@ contains
     end subroutine sfclay_random_forest
 
     subroutine sfclay_random_forest_2d(its, ite, kts, kstop, &
-                                       u_2d, v_2d, qv_2d, t_2d, dz_2d, p_1d, &
+                                       u_2d, v_2d, qv_2d, t_2d, dz_2d, p_2d, &
                                        mavail, xland, tsk, psfc, swdown, coszen, wspd, &
                                        regime, br, ust, znt, zol, hfx, qfx, lh, mol, rmol, &
                                        qstar, psim, psih, fm, fh, u10, v10, th2, t2, q2, qsfc, &
@@ -162,24 +162,29 @@ contains
         real, parameter :: xka = 2.4e-5
         integer, intent(in) :: its, ite, kts, kstop
         real, dimension(its:ite, kts:kstop), intent(in) :: u_2d, v_2d, &
-                qv_2d, t_2d, dz_2d
-        real, dimension(its:ite), intent(in) :: p_1d
-        real, dimension(its:ite), intent(in) :: mavail, xland, tsk, psfc, swdown, coszen, znt 
+                qv_2d, t_2d, dz_2d, p_2d
+        real, dimension(its:ite), intent(in) :: mavail, xland, tsk, psfc, swdown, coszen, znt
         real, dimension(its:ite), intent(inout) :: regime, wspd, br, ust, zol, hfx, qfx, lh, mol, rmol, &
                 chs, chs2, cqs2, flhc, flqc
         real, dimension(its:ite), &
                 intent(out) :: qstar, psim, psih, fm, fh, u10, v10, th2, t2, q2, qsfc, ck, cka, cd, cda
         ! declare derived variables
-        real, dimension(kts:kstop) :: potential_temperature, virtual_potential_temperature, wind_speed
+        real, dimension(kts:kstop) :: potential_temperature, virtual_potential_temperature, wind_speed, &
+                saturation_vapor_pressure, saturation_mixing_ratio, relative_humidity
         real :: zenith, d_vpt_d_z, skin_potential_temperature, virtual_temperature, &
                 skin_saturation_vapor_pressure, skin_virtual_potential_temperature, total_dz, z_a, rho, cpm, &
                 gz1_o_z0, gz2_o_z0, gz10_o_z0, pq, pq2, pq10, psih2, psim2, psih10, psim10, psiq, psiq2, psiq10, zl, &
                 psix, psix2, psix10, psit, psit2, zl2, zl10, zol_0, zol_2, zol_10, zol_z_a
         real :: pot_temp_diff, qv_diff, pot_temp_skin_diff_1, pot_temp_skin_diff_2
         real :: qv_skin_diff_1, qv_skin_diff_2
-        real, dimension(6) :: ust_rf_inputs
-        real, dimension(8) :: tstar_rf_inputs
-        real, dimension(9) :: qstar_rf_inputs
+        integer, parameter :: ust_in_size = 13
+        integer, parameter :: tstar_in_size = 15
+        integer, parameter :: qstar_in_size = 16
+        real, dimension(1, ust_in_size) :: ust_inputs
+        real, dimension(1, tstar_in_size) :: tstar_inputs
+        real, dimension(1, qstar_in_size) :: qstar_inputs
+        real(8) :: ust_temp(1), mol_temp(1), qstar_temp(1)
+
         REAL, PARAMETER :: pi_val = 3.1415927
         integer:: i, k
         do i = its, ite
@@ -187,10 +192,13 @@ contains
             total_dz = 0
             z_a = dz_2d(i, 1)
             do k = kts, kstop
-                potential_temperature(k) = t_2d(i, k) * (psfc(i) / p_1000mb) ** r_over_cp
+                potential_temperature(k) = t_2d(i, k) * (p_2d(i, k) / p_1000mb) ** r_over_cp
                 virtual_potential_temperature(k) = potential_temperature(k) * (1. + 0.61 * qv_2d(i, k))
                 wind_speed(k) = sqrt(u_2d(i, k) ** 2. + v_2d(i, k) ** 2.)
-                if (wind_speed(k) .lt. 0.1) then 
+                saturation_vapor_pressure(k) = e_s_o * exp(x_lv / r_v * (1.0 / 273.0 - 1. / t_2d(i, k)))
+                saturation_mixing_ratio(k) = eps * saturation_vapor_pressure(k) / (p_2d(i, k) - saturation_vapor_pressure(k))
+                relative_humidity(k) = qv_2d(i, k) / saturation_mixing_ratio(k) * 100.0
+                if (wind_speed(k) < 0.1) then
                     wind_speed(k) = 0.1
                 endif
                 total_dz = total_dz + dz_2d(i, k)
@@ -209,36 +217,32 @@ contains
             pot_temp_skin_diff_2 = (skin_potential_temperature - potential_temperature(kstop)) / (dz_2d(i, kstop) + dz_2d(i, kts))
             qv_skin_diff_1 = (qsfc(i) - qv_2d(i, kts)) / (dz_2d(i, kts)) * 1000.0
             qv_skin_diff_2 = (qsfc(i) - qv_2d(i, kstop)) / (dz_2d(i, kstop) + dz_2d(i, kts)) * 1000.0
-            ! Input variables into random forest input arrays
-            !ust_rf_inputs = (/ wind_speed(kts), wind_speed(kstop), psfc(i) / 100.0, d_vpt_d_z, &
-            !        skin_virtual_potential_temperature, swdown(i), &
-            !        virtual_potential_temperature(kts), virtual_potential_temperature(kstop), &
-            !        br(i), zenith /)
-            !tstar_rf_inputs = (/ wind_speed(kts), wind_speed(kstop), psfc(i) / 100.0, d_vpt_d_z, &
-            !        skin_virtual_potential_temperature, qsfc(i) * 1000.0, swdown(i), &
-            !        virtual_potential_temperature(kts), virtual_potential_temperature(kstop), &
-            !        mavail(i), br(i), zenith /)
-            !qstar_rf_inputs = (/ wind_speed(kts), wind_speed(kstop), psfc(i) / 100.0, d_vpt_d_z, &
-            !        skin_virtual_potential_temperature, qsfc(i) * 1000.0, swdown(i), &
-            !        virtual_potential_temperature(kts), virtual_potential_temperature(kstop), &
-            !        mavail(i), br(i), zenith, qv_2d(i, kts) * 1000.0, qv_2d(i, kstop) * 1000.0 /)
-            ust_rf_inputs = (/ wind_speed(kts), wind_speed(kstop), pot_temp_skin_diff_1, qv_skin_diff_1, br(i), zenith /)
-            tstar_rf_inputs = (/ qv_skin_diff_1, qv_skin_diff_2, pot_temp_skin_diff_1, &
-                pot_temp_skin_diff_2, br(i), wspd(kts), wind_speed(kstop), zenith /)
-            qstar_rf_inputs = (/ qv_skin_diff_1, qv_skin_diff_2, pot_temp_skin_diff_1, &
-                pot_temp_skin_diff_2, br(i), wspd(kts), wind_speed(kstop), zenith, mavail(i) /)
+            ust_inputs = reshape((/ wind_speed(kts), wind_speed(kstop), pot_temp_skin_diff_1, qv_skin_diff_1, br(i), zenith, &
+                            u_2d(i, kts), v_2d(i, kts), u_2d(i, kstop), v_2d(i, kstop), swdown(i), &
+                            relative_humidity(kts), relative_humidity(kstop) /), (/ 1,  ust_in_size /))
+            tstar_inputs = reshape((/ qv_skin_diff_1, qv_skin_diff_2, pot_temp_skin_diff_1, &
+                    pot_temp_skin_diff_2, br(i), wspd(kts), wind_speed(kstop), &
+                    u_2d(i, kts), v_2d(i, kts), u_2d(i, kstop), v_2d(i, kstop), zenith, swdown(i), &
+                    relative_humidity(kts), relative_humidity(kstop) /), (/ 1, tstar_in_size /))
+            qstar_inputs = reshape((/ qv_skin_diff_1, qv_skin_diff_2, pot_temp_skin_diff_1, &
+                    pot_temp_skin_diff_2, br(i), wspd(kts), wind_speed(kstop), &
+                    u_2d(i, kts), v_2d(i, kts), u_2d(i, kstop), v_2d(i, kstop), zenith, swdown(i), &
+                    mavail(i), relative_humidity(kts), relative_humidity(kstop) /), (/ 1, qstar_in_size /))
             ! Run random forests to get ust, mol, and qstar
-            ust(i) = random_forest_predict(real(ust_rf_inputs, 8), rf_sfc%friction_velocity)
-            mol(i) = random_forest_predict(real(tstar_rf_inputs, 8), rf_sfc%temperature_scale)
-            qstar(i) = random_forest_predict(real(qstar_rf_inputs, 8), rf_sfc%moisture_scale) / 1000.0
+            call random_forest_predict(real(ust_inputs, 8), rf_sfc%friction_velocity, ust_temp)
+            call random_forest_predict(real(tstar_inputs, 8), rf_sfc%temperature_scale, mol_temp)
+            call random_forest_predict(real(qstar_inputs, 8), rf_sfc%moisture_scale, qstar_temp)
+            ust(i) = real(ust_temp(1), 4)
+            mol(i) = real(mol_temp(1), 4)
+            qstar(i) = real(qstar_temp(1) / 1000.0, 4)
             ! Calculate diagnostics
             zol(i) = vonkarman * grav / potential_temperature(kts) * z_a * mol(i) / (ust(i) * ust(i))
 
-            if (zol(i) .lt. -10.) then
+            if (zol(i) < -10.) then
                 zol(i) = -1.
             endif
 
-            if (zol(i) .gt. 1.) then
+            if (zol(i) > 1.) then
                 zol(i) = 1.
             endif
 
@@ -324,7 +328,6 @@ contains
             cda(i) = (vonkarman / psix) * (vonkarman / psix)
             pot_temp_diff = potential_temperature(kts) - skin_potential_temperature 
             qv_diff = qsfc(i) - qv_2d(i, kts)
-            print*, "diffs", pot_temp_diff, qv_diff
             th2(i) = skin_potential_temperature + pot_temp_diff * psit2 / psit
             t2(i) = th2(i) * (psfc(i) / p_1000mb) ** r_over_cp
             chs(i) = abs(ust(i) * mol(i) / pot_temp_diff)
@@ -338,14 +341,10 @@ contains
             else
                 flhc(i) = 0
             endif
-            hfx(i) = flhc(i) * -pot_temp_diff
+            hfx(i) = flhc(i) * (-pot_temp_diff)
             flqc(i) = rho * mavail(i) * ust(i) * qstar(i) / qv_diff 
             qfx(i) = flqc(i) * qv_diff
             lh(i) = x_lv * qfx(i)
-            print*, "hfx", hfx(i), "lh", lh(i)
-            !if (i == 1) then
-            !    print*, "chs", chs(i), "chs2", chs2(i), "ptd", pot_temp_diff
-            !end if
         end do
     end subroutine sfclay_random_forest_2d
 
