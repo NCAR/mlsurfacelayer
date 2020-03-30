@@ -51,7 +51,6 @@ module module_random_forest
         integer :: num_trees, n, stat
         num_trees = 0
         stat = 0
-        print*, trim(file_path) // "tree_files.csv"
         open(55, file=trim(file_path) // "tree_files.csv", access="sequential", form="formatted")
         do
             read(55, '(A)', iostat=stat)

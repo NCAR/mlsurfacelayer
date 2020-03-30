@@ -227,7 +227,6 @@ contains
             i = i + 1
         end do
         batch_indices(batch_index_size) = input_size
-        print*, batch_indices
         do bi=1, batch_index_size
             neural_net_model(1)%input = input(batch_indices(bi)-batch_size+1:batch_indices(bi), :)
             do i=1, size(neural_net_model) - 1
@@ -260,7 +259,7 @@ contains
             transformed_data(:, i) = (input_data(:, i) - scale_values(i, 1)) / scale_values(i, 2)
         end do
     end subroutine standard_scaler_transform
-
+    
     subroutine load_scale_values(filename, num_inputs, scale_values)
         character(len=*), intent(in) :: filename
         integer, intent(in) :: num_inputs
@@ -276,6 +275,7 @@ contains
         close(isu)
     end subroutine load_scale_values
 
+    
     subroutine standard_scaler_inverse_transform(input_data, scale_values, transformed_data)
         ! Perform inverse z-score normalization of input_data table. Equivalent to scikit-learn StandardScaler.
         !

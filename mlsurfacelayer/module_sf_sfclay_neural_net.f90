@@ -225,7 +225,7 @@ contains
                 virtual_potential_temperature(k) = potential_temperature(k) * (1. + 0.61 * qv_2d(i, k))
                 wind_speed(k) = sqrt(u_2d(i, k) ** 2. + v_2d(i, k) ** 2.)
                 saturation_vapor_pressure(k) = e_s_o * exp(x_lv / r_v * (1.0 / 273.0 - 1. / t_2d(i, k)))
-                saturation_mixing_ratio(k) = eps * skin_saturation_vapor_pressure / (psfc(i) - skin_saturation_vapor_pressure)
+                saturation_mixing_ratio(k) = eps * saturation_vapor_pressure(k) / (p_2d(i, k) - saturation_vapor_pressure(k))
                 relative_humidity(k) = qv_2d(i, k) / saturation_mixing_ratio(k) * 100.0
                 if (wind_speed(k) < 0.1) then
                     wind_speed(k) = 0.1
@@ -246,22 +246,9 @@ contains
             pot_temp_skin_diff_2 = (skin_potential_temperature - potential_temperature(kstop)) / (dz_2d(i, kstop) + dz_2d(i, kts))
             qv_skin_diff_1 = (qsfc(i) - qv_2d(i, kts)) / (dz_2d(i, kts)) * 1000.0
             qv_skin_diff_2 = (qsfc(i) - qv_2d(i, kstop)) / (dz_2d(i, kstop) + dz_2d(i, kts)) * 1000.0
-            ! Input variables into random forest input arrays
-            !ust_rf_inputs = (/ wind_speed(kts), wind_speed(kstop), psfc(i) / 100.0, d_vpt_d_z, &
-            !        skin_virtual_potential_temperature, swdown(i), &
-            !        virtual_potential_temperature(kts), virtual_potential_temperature(kstop), &
-            !        br(i), zenith /)
-            !tstar_rf_inputs = (/ wind_speed(kts), wind_speed(kstop), psfc(i) / 100.0, d_vpt_d_z, &
-            !        skin_virtual_potential_temperature, qsfc(i) * 1000.0, swdown(i), &
-            !        virtual_potential_temperature(kts), virtual_potential_temperature(kstop), &
-            !        mavail(i), br(i), zenith /)
-            !qstar_rf_inputs = (/ wind_speed(kts), wind_speed(kstop), psfc(i) / 100.0, d_vpt_d_z, &
-            !        skin_virtual_potential_temperature, qsfc(i) * 1000.0, swdown(i), &
-            !        virtual_potential_temperature(kts), virtual_potential_temperature(kstop), &
-            !        mavail(i), br(i), zenith, qv_2d(i, kts) * 1000.0, qv_2d(i, kstop) * 1000.0 /)
             ust_inputs = reshape((/ wind_speed(kts), wind_speed(kstop), pot_temp_skin_diff_1, qv_skin_diff_1, br(i), zenith, &
-                            u_2d(i, kts), v_2d(i, kts), u_2d(i, kstop), v_2d(i, kstop), swdown(i), &
-                            relative_humidity(kts), relative_humidity(kstop) /), (/ 1,  ust_in_size /))
+                u_2d(i, kts), v_2d(i, kts), u_2d(i, kstop), v_2d(i, kstop), swdown(i), &
+                relative_humidity(kts), relative_humidity(kstop) /), (/ 1,  ust_in_size /))
             tstar_inputs = reshape((/ qv_skin_diff_1, qv_skin_diff_2, pot_temp_skin_diff_1, &
                     pot_temp_skin_diff_2, br(i), wspd(kts), wind_speed(kstop), &
                     u_2d(i, kts), v_2d(i, kts), u_2d(i, kstop), v_2d(i, kstop), zenith, swdown(i), &
@@ -280,7 +267,6 @@ contains
             ust(i) = real(ust_temp(1, 1), 4)
             mol(i) = real(mol_temp(1, 1), 4)
             qstar(i) = real(qstar_temp(1, 1) / 1000.0, 4)
-
             ! Calculate diagnostics
             zol(i) = vonkarman * grav / potential_temperature(kts) * z_a * mol(i) / (ust(i) * ust(i))
 
@@ -374,7 +360,6 @@ contains
             cda(i) = (vonkarman / psix) * (vonkarman / psix)
             pot_temp_diff = potential_temperature(kts) - skin_potential_temperature 
             qv_diff = qsfc(i) - qv_2d(i, kts)
-            print*, "diffs", pot_temp_diff, qv_diff
             th2(i) = skin_potential_temperature + pot_temp_diff * psit2 / psit
             t2(i) = th2(i) * (psfc(i) / p_1000mb) ** r_over_cp
             chs(i) = abs(ust(i) * mol(i) / pot_temp_diff)
@@ -392,7 +377,6 @@ contains
             flqc(i) = rho * mavail(i) * ust(i) * qstar(i) / qv_diff 
             qfx(i) = flqc(i) * qv_diff
             lh(i) = x_lv * qfx(i)
-            print*, "hfx", hfx(i), "lh", lh(i)
             !if (i == 1) then
             !    print*, "chs", chs(i), "chs2", chs2(i), "ptd", pot_temp_diff
             !end if
