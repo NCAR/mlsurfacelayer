@@ -1,6 +1,6 @@
 import argparse
 from mlsurfacelayer.data import process_cabauw_data
-
+from mlsurfacelayer.data_idaho import process_idaho_data
 
 def main():
     parser = argparse.ArgumentParser()
@@ -12,7 +12,10 @@ def main():
     args = parser.parse_args()
     if args.site == "cabauw":
         process_cabauw_data(args.input, args.output, reflect_counter_gradient=args.refl, average_period=args.wind)
-
+    if args.site == "idaho":
+        idaho_data = process_idaho_data(args.input)
+        idaho_data = idaho_data.dropna()
+        idaho_data.to_csv(args.output, index_label="date")
     return
 
 if __name__ == "__main__":

@@ -1,0 +1,44 @@
+data_file: "/Users/dgagne/data/cabauw_derived_data_20200401_10min_raw.csv"
+out_dir: "/Users/dgagne/data/cabauw_surface_layer_models_10Min_mo_grad_vars_20200401/"
+filter_counter_gradient: 0
+train_test_split_date: "2015-01-01"
+output_types: ["friction_velocity", "temperature_scale", "moisture_scale"]
+model_metric_types: ["mean_squared_error", "mean_absolute_error", "mean_error", "pearson_r2", "hellinger_distance"]
+input_columns:
+  friction_velocity: ["wind speed_10 m_m s-1",
+                      "virtual potential temperature skin change_10 m_K m-1",
+                      "mixing ratio skin change_10 m_g kg-1 m-1"]
+  temperature_scale: ["wind speed_10 m_m s-1",
+                      "virtual potential temperature skin change_10 m_K m-1",
+                      "mixing ratio skin change_10 m_g kg-1 m-1"]
+  moisture_scale: ["wind speed_10 m_m s-1",
+                    "virtual potential temperature skin change_10 m_K m-1",
+                    "mixing ratio skin change_10 m_g kg-1 m-1",
+                   "moisture availability_3 cm_"]
+output_columns:
+  friction_velocity: "friction velocity_surface_m s-1"
+  temperature_scale: "temperature scale_surface_K"
+  moisture_scale: "moisture scale_surface_g kg-1"
+derived_columns: ["sensible heat flux_surface_W m-2",
+                  "latent heat flux_surface_W m-2",
+                  "bulk richardson_10 m_",
+                  "air density_10 m_kg m-3",
+                  "obukhov length_surface_m"]
+stability_column: "bulk richardson_10 m_"
+model_config:
+  random_forest:
+    n_estimators: 100
+    max_features: "sqrt"
+    n_jobs: 4
+    max_leaf_nodes: 1024
+  neural_network:
+    hidden_layers: 2
+    hidden_neurons: 64
+    batch_size: 128
+    epochs: 20
+    lr: 0.0001
+    activation: tanh
+    l2_weight: 0.0
+    verbose: 1
+
+
