@@ -103,9 +103,9 @@ def process_cabauw_data(csv_path, out_file, nan_column=("soil_water", "TH03"), c
                        "soil potential temperature_0 cm_K",
                        "soil potential temperature_4 cm_K",
                        "soil water content_3 cm_m3 m-3",
-                       "soil water content_8 cm_m3 m-3",
+                       #"soil water content_8 cm_m3 m-3",
                        "moisture availability_3 cm_",
-                       "moisture availability_8 cm_",
+                       #"moisture availability_8 cm_",
                        "bulk richardson_10 m_",
                        "bulk richardson_2 m_",
                        "bulk richardson_10-2 m_",
@@ -157,9 +157,9 @@ def process_cabauw_data(csv_path, out_file, nan_column=("soil_water", "TH03"), c
     derived_data["soil potential temperature_4 cm_K"] = potential_temperature(derived_data["soil temperature_4 cm_K"],
                                                                              derived_data["pressure_2 m_hPa"])
     derived_data["soil water content_3 cm_m3 m-3"] = combined_data[("soil_water", "TH03")]
-    derived_data["soil water content_8 cm_m3 m-3"] = combined_data[("soil_water", "TH08")]
+    #derived_data["soil water content_8 cm_m3 m-3"] = combined_data[("soil_water", "TH08")]
     derived_data["moisture availability_3 cm_"] = moisture_availability(derived_data["soil water content_3 cm_m3 m-3"])
-    derived_data["moisture availability_8 cm_"] = moisture_availability(derived_data["soil water content_8 cm_m3 m-3"])
+    #derived_data["moisture availability_8 cm_"] = moisture_availability(derived_data["soil water content_8 cm_m3 m-3"])
     derived_data["upward longwave irradiance_0 m_W m-2"] = combined_data[("irrad", "LWU")]
     derived_data["downward longwave irradiance_0 m_W m-2"] = combined_data[("irrad", "LWD")]
     derived_data["upward shortwave irradiance_0 m_W m-2"] = combined_data[("irrad", "SWU")]

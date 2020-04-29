@@ -82,6 +82,8 @@ def main():
         model_predictions.loc[date, "moisture_scale-mo"] = mo_out[2] * 1000.0
         if d % 1000 == 0:
             print(date, mo_out[0], mo_out[1], mo_out[2] * 1000)
+    print(model_predictions.loc[:, "moisture_scale-mo"].min(),
+          model_predictions.loc[:, "moisture_scale-mo"].max())
     for output_type in output_types:
         full_model = output_type + "-" + "mo"
         for model_metric in model_metric_types:
@@ -94,6 +96,10 @@ def main():
     for output_type in output_types:
         print(output_columns[output_type])
         print(data["train"][input_columns[output_type]].shape)
+        print(data["train"][output_columns[output_type]].shape)
+        print(data["train"][input_columns[output_type]].head())
+        print(data["train"][output_columns[output_type]].head())
+
         print(data["test"][output_columns[output_type]].shape)
         model_predictions.loc[:, output_columns[output_type]] = data["test"][output_columns[output_type]]
         input_scalers[output_type] = StandardScaler()
@@ -104,8 +110,10 @@ def main():
             model_objects[model_name] = {}
             print("Training", output_type, model_name)
             model_objects[model_name][output_type] = model_classes[model_name](**model_config)
+            print(input_columns[output_type])
+            print(data["train"][input_columns[output_type]].shape)
             if model_name == "random_forest":
-                model_objects[model_name][output_type].fit(data["train"][input_columns[output_type]],
+                model_objects[model_name][output_type].fit(data["train"][input_columns[output_type]].values,
                                                            data["train"][output_columns[output_type]].values)
             else:
                 model_objects[model_name][output_type].fit(scaled_train_input,
