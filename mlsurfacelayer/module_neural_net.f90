@@ -28,10 +28,26 @@ contains
         type(Dense), intent(in) :: layer
         real(kind=8), dimension(size(input, 1), layer%output_size), intent(out) :: output
         real(kind=8), dimension(size(input, 1), layer%output_size) :: dense_output
-        integer :: i, j
-        dense_output = matmul(input, layer%weights)
-        do i=1, size(input, 1)
-            do j=1, size(layer%bias)
+        integer :: i, j, num_examples
+        real(kind=8) :: alpha, beta
+        !real(kind=8) :: time_start, time_end
+        alpha = 1
+        beta = 1
+        dense_output = 0
+        output = 0
+        num_examples = size(input, 1)
+        !call cpu_time(time_start)
+        call dgemm('n', 'n', num_examples, layer%output_size, layer%input_size, &
+            alpha, input, num_examples, layer%weights, layer%input_size, beta, dense_output, num_examples)
+        !call cpu_time(time_end)
+        !print *, num_examples, layer%output_size, layer%input_size
+        !print *, "After dgemm ", dense_output(1, 1), time_end - time_start
+        !call cpu_time(time_start)
+        !dense_output = matmul(input, layer%weights)
+        !call cpu_time(time_end)
+        !print *, "After matmul", dense_output(1, 1), time_end - time_start
+        do i=1, num_examples
+            do j=1, layer%output_size
                 dense_output(i, j) = dense_output(i, j) + layer%bias(j)
             end do
         end do
