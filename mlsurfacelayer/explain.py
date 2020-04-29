@@ -5,7 +5,7 @@ import traceback
 from copy import deepcopy
 
 
-def feature_importance(x, y, model, metric_function, x_columns=None, permutations=30, processes=1,
+def feature_importance(x, y, model, metric_function, x_columns=None, permutations=5, processes=1,
                        col_start="perm_", seed=8272):
     """
     Calculate permutation feature importance scores for an arbitrary machine learning model.
