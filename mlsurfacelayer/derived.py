@@ -227,3 +227,48 @@ def saturation_mixing_ratio(temperature_K, pressure_hPa):
     es = saturation_vapor_pressure(temperature_K)
     epsilon = 0.622
     return epsilon * es / (pressure_hPa - es) * 1000.0
+
+
+def inHg_to_hpa(pressure_inHg):
+    """
+    Convert pressure in inches of mercury (inHg) to pressure in hectopascals (hpa)
+
+    Args:
+        pressure_inHg: The air pressure in units inHg
+
+    Returns:
+        The air pressure in units hpa
+    """
+    return pressure_inHg * 33.86
+
+
+def friction_velocity(tau, density):
+    """
+    Compute friction velocity from tau and air density.
+
+    Args:
+        tau: The surface stress
+        pressure_hpa: The atmospheric density in kg/m^3
+
+    Returns:
+        The friction velocity
+    """
+    fv = np.sqrt(tau/density)
+    return fv
+
+
+def mixing_ratio(temp_c, relative_humidity, pressure_hpa):
+    """
+    Calculate the mixing ratio.
+
+    Args:
+        temp_C: temperature in units of Celsius
+        relative humidity: as a percentage
+        pressure_hpa: atmospheric pressure in hPa
+
+    Returns:
+        The mixing ratio in g / kg
+    """
+    saturation_vapor_pressure = (0.6108 * np.exp(17.27 * temp_c / (temp_c + 237.3))) * 10
+    vapor_pressure = relative_humidity / 100 * saturation_vapor_pressure
+    return 621.97 * vapor_pressure / (pressure_hpa-vapor_pressure)
