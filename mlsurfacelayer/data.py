@@ -3,7 +3,7 @@ from glob import glob
 from os.path import join
 from .derived import *
 from pvlib.solarposition import get_solarposition
-
+import datetime
 
 def process_cabauw_data(csv_path, out_file, nan_column=("soil_water", "TH03"), cabauw_lat=51.971, cabauw_lon=4.926,
                         elevation=-0.7, reflect_counter_gradient=False, average_period=None):
@@ -268,3 +268,142 @@ def filter_counter_gradient_data(data, gradient_column="potential temperature sk
     filtered_indices = data[gradient_column] * data[flux_column] >= 0
     filtered_data = data.loc[filtered_indices, :]
     return filtered_data
+
+
+def process_idaho_data(csv_path, out_file, idaho_lat=43.5897, idaho_lon=-112.9399,
+                        elevation=1492.6, reflect_counter_gradient=False, average_period=None):
+    """
+    Site data at https://www.noaa.inel.gov/projects/INLMet/MesonetLocations.pdf
+
+    Args:
+        csv_path:
+        out_file:
+        nan_column:
+        idaho_lat:
+        idaho_lon:
+        elevation:
+        reflect_counter_gradient:
+        average_period:
+
+    Returns:
+
+    """
+    idaho_flux_data = pd.read_csv(join(csv_path, "FRD_ECFlux_2015-2017.csv"), na_values=[-9999.0])
+    idaho_met_data = pd.read_csv(join(csv_path, "FRD_TallTower_Met_2015-2017.csv"), na_values=[-9999.0])
+    idaho_rad_data = pd.concat([pd.read_csv(join(csv_path, f"FRD_FLXStation_radiation_{year:d}.csv"),
+                                            na_values=[-999]) for year in range(2015, 2018)])
+    idaho_flux_no_missing = idaho_flux_data.dropna(axis=0, how="any")
+    idaho_met_no_missing = idaho_met_data.dropna(axis=0, how="any")
+    idaho_rad_no_missing = idaho_rad_data.dropna(axis=0, how="any")
+    idaho_met_no_missing.index = pd.DatetimeIndex(idaho_met_no_missing[['Year', 'Month', 'Day', 'Hour', 'Minute']].apply(
+        lambda s: datetime.datetime(*s), axis=1))
+    flux_dt = idaho_flux_no_missing.date.apply(
+        lambda x: pd.to_datetime(x).strftime('%Y-%m-%d'))
+    flux_dt = flux_dt + ' ' + idaho_flux_no_missing['time']
+    idaho_flux_no_missing.index = pd.DatetimeIndex(flux_dt)
+    idaho_rad_no_missing.index = pd.DatetimeIndex(idaho_rad_no_missing[['Year', 'Month', 'Day', 'Hour', 'Minute']].apply(
+        lambda s: datetime.datetime(*s), axis=1))
+    idaho_met_no_missing.drop(["Year", "Month", "Day", "Hour", "Minute"], axis=1, inplace=True)
+    idaho_rad_no_missing.drop(["Year", "Month", "Day", "Hour", "Minute"], axis=1, inplace=True)
+    idaho_flux_no_missing.drop(["date", "time", "DOY", "daytime"], axis=1, inplace=True)
+    result = pd.concat([idaho_met_no_missing, idaho_flux_no_missing, idaho_rad_no_missing], axis=1, join="inner")
+    print(result)
+    for col in result.columns:
+        print(col)
+    solpos = get_solarposition(result.index, idaho_lat, idaho_lon, altitude=elevation)
+
+    result['solar_zenith_angle'] = np.array(solpos['zenith'])
+
+    # Need to convert Idaho data from celsius to kelvin
+    result['2m Temp K'] = celsius_to_kelvin(result['2m Temp C'])
+    result['10m Temp K'] = celsius_to_kelvin(result['10m Temp C'])
+    result['15m Temp K'] = celsius_to_kelvin(result['15m Temp C'])
+    result['45m Temp K'] = celsius_to_kelvin(result['45m Temp C'])
+
+    # Need to convert Idaho data to wind components from speed and direction
+    result['2m U-Wind m/s'], result['2m V-Wind m/s'] = wind_components(result['2m Wind Speed m/s'],
+                                                                       result['2m Wind Dir deg'])
+    result['10m U-Wind m/s'], result['10m V-Wind m/s'] = wind_components(result['10m Wind Speed m/s'],
+                                                                         result['10m Wind Dir deg'])
+    result['15m U-Wind m/s'], result['15m V-Wind m/s'] = wind_components(result['15m Wind Speed m/s'],
+                                                                         result['15m Wind Dir deg'])
+    result['45m U-Wind m/s'], result['45m V-Wind m/s'] = wind_components(result['45m Wind Speed m/s'],
+                                                                         result['45m Wind Dir deg'])
+
+    # Need to convert temperatures in inches of mercury to hectopascals
+    print(inHg_to_hpa(result['BP inches Hg'].values).shape)
+    result.loc[:, 'pressure hpa'] = inHg_to_hpa(result['BP inches Hg'].values)
+
+    # Need to convert from Kelvin to Potential Temperature
+    result['2m potential temperature K'] = potential_temperature(result['2m Temp K'], result['pressure hpa'])
+    result['10m potential temperature K'] = potential_temperature(result['10m Temp K'],
+                                                                  result['pressure hpa'])
+    result['15m potential temperature K'] = potential_temperature(result['15m Temp K'],
+                                                                  result['pressure hpa'])
+    result['45m potential temperature K'] = potential_temperature(result['45m Temp K'],
+                                                                  result['pressure hpa'])
+
+    # Compute the friction velocity
+    result['friction velocity m_s'] = friction_velocity(result['Tau'], result['air_density'])
+
+    # Compute the temperature scale
+    result['temperature scale K'] = temperature_scale(result['H'], result['air_density'], result['friction velocity m_s'])
+
+    # Compute the moisture scale
+    result['moisture scale g_kg'] = moisture_scale(result['LE'], result['air_density'], result['friction velocity m_s'])
+
+    # Compute the Monin Obukhov Length
+    result['obukhov length m'] = obukhov_length(result['2m potential temperature K'], result['temperature scale K'],
+                                              result['friction velocity m_s'], von_karman_constant=0.4)
+
+    # Compute the mixing ratio
+    result['2m mixing ratio g_kg'] = mixing_ratio(result['2m Temp C'],
+                                                  result['2m RH %'], result["pressure hpa"])
+
+    # Compute the virtual potential temperature
+    result['2m virtual potential temperature K'] = virtual_temperature(result['2m potential temperature K'],
+                                                                     result['2m mixing ratio g_kg'])
+    # Compute the Bulk Richardson Number
+    result['bulk richardson number'] = bulk_richardson_number(result['2m potential temperature K'], 2,
+                                                              result['2m mixing ratio g_kg'],
+                                                              result['2m virtual potential temperature K'],
+                                                              result['2m Wind Speed m/s'])
+    # Try computing Bulk Richardson Number between 10M and 2M
+    # Compute the Bulk Richardson Number
+    result['10m bulk richardson number'] = bulk_richardson_number(result['10m potential temperature K'], 10,
+                                                                  result['2m mixing ratio g_kg'],
+                                                                  result['2m virtual potential temperature K'],
+                                                                  result['2m Wind Speed m/s'])
+    # Try computing Bulk Richardson Number between 2M and 5cm soil temperature
+    # Compute the Bulk Richardson Number
+    # Compute the virtual potential temperature
+
+    result['5cm Soil Temp K'] = celsius_to_kelvin(result['5cm Soil Temp C'])
+    result['5cm potential temperature K'] = potential_temperature(result['5cm Soil Temp K'],
+                                                                  result['pressure hpa'])
+    result['5cm virtual potential temperature'] = virtual_temperature(result['5cm potential temperature K'],
+                                                                      result['2m mixing ratio g_kg'])
+    result['Soil bulk richardson number'] = bulk_richardson_number(result['2m potential temperature K'], 10,
+                                                                   result['2m mixing ratio g_kg'],
+                                                                   result['5cm virtual potential temperature'],
+                                                                   result['2m Wind Speed m/s'])
+
+    result["roughness length surface m"] = np.minimum(9, np.maximum(0.001, 10 * np.exp(
+        -0.4 * np.maximum(result["10m Wind Speed m/s"], 1) / result["friction velocity m_s"])))
+    result['10m bulk richardson number'].drop(result['10m bulk richardson number'].idxmax())
+    result["BRN_sign"] = np.sign(result['10m bulk richardson number'])
+    result['Soil bulk richardson number'].drop(result['Soil bulk richardson number'].idxmin())
+    result["BRN_sign_5cm"] = np.sign(result['Soil bulk richardson number'])
+    result["skin temperature K"] = skin_temperature(result["Lwout (W/m^2)"])
+    result["skin potential temperature K"] = potential_temperature(result["skin temperature K"], result["pressure hpa"])
+    result["skin saturation mixing ratio g_kg"] = saturation_mixing_ratio(result["skin temperature K"],
+                                                                          result["pressure hpa"])
+    result['skin bulk richardson number'] = bulk_richardson_number(result['10m potential temperature K'], 10,
+                                                                  result['2m mixing ratio g_kg'],
+                                                                  result['skin potential temperature K'],
+                                                                  result['2m Wind Speed m/s'])
+    if average_period is not None:
+        result = result.rolling(window=average_period).mean()
+        result = result.dropna()
+    result.to_csv(out_file, index_label="Time")
+    return
