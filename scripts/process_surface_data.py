@@ -8,7 +8,7 @@ def main():
     parser.add_argument("-s", "--site", default="cabauw", help="Site type: cabauw, idaho")
     parser.add_argument("-o", "--output", help="Output file.")
     parser.add_argument("-r", "--refl", action="store_true", help="Change sign of Counter Gradient Fluxes")
-    parser.add_argument("-w", "--wind", default="30Min", help="Averaging window")
+    parser.add_argument("-w", "--wind", default="30Min", help="Time-averaging window in pandas time units. 30Min is the default.")
     args = parser.parse_args()
     if args.site == "cabauw":
         process_cabauw_data(args.input, args.output, reflect_counter_gradient=args.refl, average_period=args.wind)

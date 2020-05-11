@@ -74,10 +74,25 @@ First download surface layer data to your local machine.
 * [Cabauw Raw Data](https://drive.google.com/open?id=10x4VeF3yJmyWv5LV8kkNJ5vbkxME4fJc)
 * [Cabauw Processed Data](https://drive.google.com/open?id=1AXdpqMcRmQsbzSASyD1yb7wLqT1rBQxQ)
 
-To process raw data, run scripts/process_surface_data.py.
+### scripts/process_surface_data.py
+To process raw data, run scripts/process_surface_data.py. The script is configured by changing the command
+line arguments:
+* -i, --input: Path to the directory containing the raw CSV files for Idaho or Cabauw
+* -o, --output: Filename and path for the csv file containing all of the derived data. It will be created
+by the script, and the older version of the file will be overwritten.
+* -s, --site: Currently "idaho" and "cabauw" are the valid options. Additional sites can be added
+under other if clauses.
+* -w, --wind: Size of the time averaging window in pandas string time units (i.e., "30Min"). The data are 10-minute averaged by default.
+30 minute averages seem to peform better in initial tests of the system.
+* -r, --refl: If used, changes the sign of fluxes that are counter the temperature or moisture gradient. 
+Only implemented for Cabauw and not a recommended option going forward.
 
+The functions for each site are in data.py. The functions for calculating the derived quantities are in derived.py. 
+
+### scripts/train_surface_models.py
 To train ML models, run scripts/train_surface_models.py and use the configuration files in the 
-config folder to see how they work. 
+config folder to see how they work.  The file `surface_layer_training_30Min_20191121.yml` is the most
+up-to-date version. Currently only Cabauw models have been trained with this, but it should work for Idaho.
 
 
 
