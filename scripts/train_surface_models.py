@@ -7,7 +7,7 @@ from mlsurfacelayer.models import save_random_forest_csv, save_scaler_csv
 from mlsurfacelayer.mo import mo_similarity
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.preprocessing import StandardScaler
-from mlmicrophysics.models import DenseNeuralNetwork
+from mlsurfacelayer.models import DenseNeuralNetwork
 from mlsurfacelayer.explain import feature_importance
 from os import makedirs
 from os.path import exists, join

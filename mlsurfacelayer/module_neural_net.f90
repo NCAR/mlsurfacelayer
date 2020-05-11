@@ -1,6 +1,7 @@
 module module_neural_net
     use netcdf
     implicit none
+    integer, parameter, public :: r8 = selected_real_kind(12)
     type Dense
         integer :: input_size
         integer :: output_size
@@ -30,6 +31,7 @@ contains
         real(kind=8), dimension(size(input, 1), layer%output_size) :: dense_output
         integer :: i, j, num_examples
         real(kind=8) :: alpha, beta
+        external :: dgemm
         !real(kind=8) :: time_start, time_end
         alpha = 1
         beta = 1
@@ -37,6 +39,7 @@ contains
         output = 0
         num_examples = size(input, 1)
         !call cpu_time(time_start)
+        !print*, "Input", size(input, 1), size(input, 2), input
         call dgemm('n', 'n', num_examples, layer%output_size, layer%input_size, &
             alpha, input, num_examples, layer%weights, layer%input_size, beta, dense_output, num_examples)
         !call cpu_time(time_end)
@@ -51,7 +54,9 @@ contains
                 dense_output(i, j) = dense_output(i, j) + layer%bias(j)
             end do
         end do
+        !print*, "Dense", size(dense_output, 1), size(dense_output, 2), dense_output
         call apply_activation(dense_output, layer%activation, output)
+        !print*, "Activated", size(output, 1), size(output, 2), output
         return
     end subroutine apply_dense
 
@@ -79,40 +84,53 @@ contains
         real(kind=8), dimension(size(input, 1)) :: softmax_sum
         real(kind=8), parameter :: selu_alpha = 1.6732
         real(kind=8), parameter :: selu_lambda = 1.0507
+        real(kind=8), parameter :: zero = 0.0
         integer :: i, j
         select case (activation_type)
+            case (0)
+                output = input
             case (1)
-                where(input < 0)
-                    output = 0
-                elsewhere
-                    output = input
-                endwhere
+         !      print*, "relu"
+                !where(input < 0)
+                !    output = 0
+                !elsewhere
+                !    output = input
+                !endwhere
+                do i=1,size(input, 1)
+                    do j=1, size(input,2)
+                        output(i, j) = dmax1(input(i, j), zero)
+                    end do
+                end do
             case (2)
-                where(input < 0)
-                    output = exp(input) - 1
-                elsewhere
-                    output = input
-                end where
-            case (3)
-                where(input < 0)
-                    output = selu_lambda * ( selu_alpha * exp(input) - selu_alpha)
-                elsewhere
-                    output = selu_lambda * input
-                end where
-            case (4)
+            !    print*, "sigmoid"
                 output = 1.0 / (1.0 + exp(-input))
+            case (3)
+          !      print*, "elu"
+                do i=1,size(input, 1)
+                    do j=1, size(input,2)
+                        output(i, j) = dmax1(input(i, j), exp(input(i, j))-1.0_r8)
+                    end do
+                end do
+            case (4)
+           !     print*, "selu"
+                do i=1,size(input, 1)
+                    do j=1, size(input,2)
+                        output(i, j) = dmax1(input(i, j), selu_lambda * ( selu_alpha * exp(input(i, j)) - selu_alpha))
+                    end do
+                end do
             case (5)
+             !   print*, "tanh"
                 output = tanh(input)
             case (6)
-                softmax_sum = sum(exp(input), dim=2) 
+             !   print*, "softmax"
+                softmax_sum = sum(exp(input), dim=2)
                 do i=1, size(input, 1)
                     do j=1, size(input, 2)
                         output(i, j) = exp(input(i, j)) / softmax_sum(i)
                     end do
                 end do
-            case (7)
-                output = input
             case default
+             !   print*, "default linear"
                 output = input
         end select
         return
@@ -194,25 +212,25 @@ contains
             call check(nf90_get_att(ncid, layer_weight_var_id, "activation", &
                                     activation_name))
             select case (trim(activation_name))
+                case ("linear")
+                    neural_net_model(i)%activation = 0
                 case ("relu")
                     neural_net_model(i)%activation = 1
-                case ("elu")
-                    neural_net_model(i)%activation = 2
-                case ("selu")
-                    neural_net_model(i)%activation = 3
                 case ("sigmoid")
+                    neural_net_model(i)%activation = 2
+                case ("elu")
+                    neural_net_model(i)%activation = 3
+                case ("selu")
                     neural_net_model(i)%activation = 4
                 case ("tanh")
                     neural_net_model(i)%activation = 5
                 case ("softmax")
                     neural_net_model(i)%activation = 6
-                case ("linear")
-                    neural_net_model(i)%activation = 7
                 case default
                     neural_net_model(i)%activation = 7
             end select
         end do
-        print *, "finished loading neural network " // filename
+        !print *, "finished loading neural network " // filename
         call check(nf90_close(ncid))
 
     end subroutine init_neural_net
@@ -251,6 +269,7 @@ contains
             end do
                 call apply_dense(neural_net_model(i)%input, neural_net_model(i), neural_net_model(i)%output)
             prediction(batch_indices(bi)-batch_size + 1:batch_indices(bi), :) = neural_net_model(size(neural_net_model))%output
+        !    print*,"Prediction", prediction(batch_indices(bi)-batch_size + 1:batch_indices(bi), :)
         end do
         deallocate(batch_indices)
     end subroutine neural_net_predict
@@ -275,7 +294,7 @@ contains
             transformed_data(:, i) = (input_data(:, i) - scale_values(i, 1)) / scale_values(i, 2)
         end do
     end subroutine standard_scaler_transform
-    
+
     subroutine load_scale_values(filename, num_inputs, scale_values)
         character(len=*), intent(in) :: filename
         integer, intent(in) :: num_inputs
@@ -291,7 +310,7 @@ contains
         close(isu)
     end subroutine load_scale_values
 
-    
+
     subroutine standard_scaler_inverse_transform(input_data, scale_values, transformed_data)
         ! Perform inverse z-score normalization of input_data table. Equivalent to scikit-learn StandardScaler.
         !
@@ -376,5 +395,6 @@ contains
         end do
     end subroutine print_2d_array
 end module module_neural_net
+
 
 
