@@ -91,8 +91,43 @@ The functions for each site are in data.py. The functions for calculating the de
 
 ### scripts/train_surface_models.py
 To train ML models, run scripts/train_surface_models.py and use the configuration files in the 
-config folder to see how they work.  The file `surface_layer_training_30Min_20191121.yml` is the most
-up-to-date version. Currently only Cabauw models have been trained with this, but it should work for Idaho.
+config folder to see how they work.  The file `config/surface_layer_training_30Min_20191121.yml` is the most
+up-to-date version. Currently only Cabauw models have been trained with this, but it should work for Idaho and 
+other sites that are included in process_surface_data.py.
+
+To run `train_surface_models.py`:
+* Make sure the latest version of the code is installed to your python environment.
+* `cd scripts`
+* `python train_surface_models.py ../config/surface_layer_training_30Min_20191121.yml`
+
+The config file contains the following arguments:
+* data_file: Path to the derived data file from process_surface_data.py
+* out_dir: Path to the directory where trained models, metrics and interpretation information are output.
+* filter_counter_gradient: If 1 change the sign of fluxes that are opposite the temperature gradient. If 0, do not. 
+* train_test_split_date: Date in "YYYY-MM-DD" format that separates training and testing data periods. 
+Examples before the split data are used for training, and examples afterward are used for testing.
+* output_types: Names for the different ML models. Should be `["friction_velocity", "temperature_scale", "moisture_scale"]`
+* model_metric_types: List of metrics calculated for each output type. Currently we use
+`["mean_squared_error", "mean_absolute_error", "mean_error", "pearson_r2", "hellinger_distance"]`
+* input_columns: For each output type, a list of the input variable names in `data_file`.
+* output_columns: The columns in `data_file` associated with each output type
+* derived_columns: A list of additional data columns to include with the predictions for analysis purposes.
+stability_column: The column to use when splitting the data into stability regimes.
+* model_config: Specify the hyperparameters for different machine learning models. Currently `random_forest` and `neural_network` 
+    are the supported types. If a parameter is not specified, the default value is used.
+  * random_forest: scikit-learn random forest regressor
+    * n_estimators: Number of trees
+    * max_features: Number of features randomly selected at each node for evaluation
+    * n_jobs: Number of processes used for training
+    * max_leaf_nodes: Max number of leaf nodes for each tree. Used to control depth
+  * neural_network: Dense (fully-connected) neural network implemented in Tensorflow
+    * hidden_layers: Number of hidden layers
+    * hidden_neurons: Number of neurons per hidden layer
+    * batch_size: Number of examples per training batch (random sample from full training set)
+    * epochs: Number of iterations over training set
+    * lr: Learning rate.
+    * activation: Non-linear activation function. Options include "relu", "tanh", "elu", "selu"
+    * l2_weight: Strength of the l2 norm (Ridge) regularization penalty. Can help with overfitting
 
 
 
