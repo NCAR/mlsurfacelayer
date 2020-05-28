@@ -223,7 +223,23 @@ def process_cabauw_data(csv_path, out_file, nan_column=("soil_water", "TH03"), c
     if average_period is not None:
         derived_data = derived_data.rolling(window=average_period).mean()
         derived_data = derived_data.dropna()
-    derived_data.to_csv(out_file, columns=derived_columns, index_label="Time")
+
+    """
+    """
+    # Create the header with updated column names
+    header_names = []
+    for col in derived_columns:
+        parts = col.split("_")
+        var = parts[0].replace(" ", "_")
+        level = parts[1].replace(" ", "_")
+        unit = parts[2].replace(" ", "_")
+        if unit == '':
+            unit = 'None'
+        name = "%s:%s:%s" % (var, level, unit)
+        print ("%s   -->  %s" % (col, name))
+        header_names.append(name)
+        
+    derived_data.to_csv(out_file, columns=derived_columns, header=header_names, index_label="Time")
     return derived_data
 
 
