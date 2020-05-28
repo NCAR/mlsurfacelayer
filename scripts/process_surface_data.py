@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import argparse
 from mlsurfacelayer.data import process_cabauw_data
 from mlsurfacelayer.data import process_idaho_data
