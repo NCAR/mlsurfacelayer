@@ -236,7 +236,7 @@ def process_cabauw_data(csv_path, out_file, nan_column=("soil_water", "TH03"), c
         if unit == '':
             unit = 'None'
         name = "%s:%s:%s" % (var, level, unit)
-        print ("%s   -->  %s" % (col, name))
+        #print ("%s   -->  %s" % (col, name))
         header_names.append(name)
         
     derived_data.to_csv(out_file, columns=derived_columns, header=header_names, index_label="Time")
@@ -418,8 +418,121 @@ def process_idaho_data(csv_path, out_file, idaho_lat=43.5897, idaho_lon=-112.939
                                                                   result['2m mixing ratio g_kg'],
                                                                   result['skin potential temperature K'],
                                                                   result['2m Wind Speed m/s'])
+    #
+    #Add gradients
+    #
+    for height in [2, 10, 15, 45]:
+        result[f"potential temperature skin change_{height:d}m K m-1"] = \
+          (result['skin potential temperature K'] - result[f"{height:d}m potential temperature K"]) \
+          / height
+    result["virtual potential temperature skin change_2m K m-1"] = \
+      (result["skin potential temperature K"] - result['2m virtual potential temperature K']) / height
+    result["mixing ratio skin change_2m m_g kg-1 m-1"] = \
+      (result['skin saturation mixing ratio g_kg'] - result['2m mixing ratio g_kg']) / height
+        
     if average_period is not None:
         result = result.rolling(window=average_period).mean()
         result = result.dropna()
-    result.to_csv(out_file, index_label="Time")
+
+    # Rename the columns so that they match the cabauw format (var:level:unit)
+    rename_map = {"2m Wind Speed m/s": "Wind_Speed:2_m:m/s",
+                      "2m Wind Gust m/s": "Wind_Gust:2_m:m/s",
+                      "2m Wind Dir deg": "Wind_Dir:2_m:deg",
+                      "2m Sigma Theta deg": "Sigma_Theta:2_m:deg",
+                      "10m Wind Speed m/s": "Wind_Speed:10_m:m/s",
+                      "10m Wind Gust m/s": "Wind_Gust:10_m:m/s",
+                      "10m Wind Dir deg": "Wind_Dir:10_m:deg",
+                      "10m Sigma Theta deg": "Sigma_Theta:10_m:deg",
+                      "15m Wind Speed m/s": "Wind_Speed:15_m:m/s",
+                      "15m Wind Gust m/s": "Wind_Gust:15_m:m/s",
+                      "15m Wind Dir deg": "Wind_Dir:15_m:deg",
+                      "15m Sigma Theta deg" : "Sigma_Theta:15_m:deg",
+                      "45m Wind Speed m/s" : "Wind_Speed:45_m:m/s",
+                      "45m Wind Gust m/s" : "Wind_Gust:45_m:m/s",
+                      "45m Wind Dir deg" : "Wind_Dir:45_m:deg",
+                      "45m Sigma Theta deg" : "Sigma_Theta:45_m:deg",
+                      "Top Wind Speed m/s" : "Wind_Speed:Top:m/s",
+                      "Top Wind Gust m/s" : "Wind_Gust:Top:m/s",
+                      "Top Wind Dir deg" : "Wind_Dir:Top:deg",
+                      "Top Sigma Theta deg" : "Sigma_Theta:Top:deg",
+#                      "2m Temp C" : "Temp:2_m:C",
+#                      "10m Temp C" : "Temp:10_m:C",
+#                      "15m Temp C" : "Temp:15_m:C",
+#                      "45m Temp C" : "Temp:45_m:C",
+#                      "Top Temp C" : "Temp:Top:C",
+                      "2m RH %" : "RH:2_m:C",
+                      "Solar Rad w/m^2" : "GHI_met_tower:0_m:w/m^2",
+                      "BP inches Hg" : "BP_inches:0_m:Inches_Hg",
+                      "Rain inches" : "Rain:0_m:inches",
+                      "5cm Water Content" : "Water_Content:5_cm:%",
+                      "10cm Water Content" : "Water_Content:10_cm:%",
+                      "20cm Water Content" : "Water_Content:20_cm:%",
+                      "50cm Water Content" : "Water_Content:50_cm:%",
+                      "100cm Water Content" : "Water_Content:100_cm:%",
+                      "5cm Soil Temp C" : "Soil_Temp:5_cm:C",
+                      "10cm Soil Temp C" : "Soil_Temp:10_cm:C",
+                      "20cm Soil Temp C" : "Soil_Temp:20_cm:C",
+                      "50cm Soil Temp C" : "Soil_Temp:50_cm:C",
+                      "100cm Soil Temp C" : "Soil_Temp:100_cm:C",
+                      "Tau" : "Tau:0_m:kg_m-1_s-2",
+                      "H" : "H:0_m:w/m^2",
+                      "LE" : "LE:0_m:W/m^2",
+#                      "co2_flux" : "co2_flux:0_m:umol_s-1_m-2",
+#                      "h2o_flux" : "h2o_flux:0_m:mm_s-1_m-1",
+                      "air_density" : "air_density:0_m:kg/m^3",
+                      "air_heat_capacity" : "air_heat_capacity:0_m:J_kg-1_K-1",
+                      "NtRad (W/m^2)" : "NtRad:0_m:W/m^2",
+                      "Solar Rad (W/m^2)" : "GHI_flux_tower:0_m:W/m^2",
+                      "Swout (W/m^2)" : "Swout:0_m:W/m^2",
+                      "Lwin (W/m^2)" : "Lwin:0_m:W/m^2",
+                      "Lwout (W/m^2)" : "Lwout:0_m:W/m^2",
+                      "solar_zenith_angle" : "Solar_zenith_angle:0_m:deg",
+                      "2m Temp K" : "Temp:2_m:K",
+                      "10m Temp K" : "Temp:10_m:K",
+                      "15m Temp K" : "Temp:15_m:K",
+                      "45m Temp K" : "Temp:45_m:K",
+                      "2m U-Wind m/s" : "U-Wind:2_m:m/s",
+                      "2m V-Wind m/s" : "V-Wind:2_m:m/s",
+                      "10m U-Wind m/s" : "U-Wind:10_m:m/s",
+                      "10m V-Wind m/s" : "V-Wind:10_m:m/s",
+                      "15m U-Wind m/s" : "U-Wind:15_m:m/s",
+                      "15m V-Wind m/s" : "V-Wind:15_m:m/s",
+                      "45m U-Wind m/s" : "U-Wind:45_m:m/s",
+                      "45m V-Wind m/s" : "V-Wind:45_m:m/s",
+                      "pressure hpa" : "pressure:0_m:hpa",
+                      "2m potential temperature K" : "potential_temperature:2_m:K",
+                      "10m potential temperature K" : "potential_temperature:10_m:K",
+                      "15m potential temperature K" : "potential_temperature:15_m:K",
+                      "45m potential temperature K" : "potential_temperature:45_m:K",
+                      "friction velocity m_s" : "friction_velocity:0_m:m/s",
+                      "temperature scale K" : "temperature_scale:0_m:K",
+                      "moisture scale g_kg" : "moisture_scale:0_m:g_kg",
+                      "obukhov length m" : "obukhov_length:0_m:m",
+                      "2m mixing ratio g_kg" : "mixing_ratio:2_m:g_kg",
+                      "2m virtual potential temperature K" : "Virtual_potential_temperature:2_m:K",
+                      "bulk richardson number" : "bulk_richardson_number:2_m:None",
+                      "10m bulk richardson number" : "bulk_richardson_number:10_m_2_m:None",
+                      "5cm Soil Temp K" : "Soil_Temp:5_cm:K",
+                      "5cm potential temperature K" : "potential_temperature:5_cm:K",
+                      "5cm virtual potential temperature" : "Virtual_potential_temperature:5_cm:K",
+                      "Soil bulk richardson number" : "soil_bulk_richardson_number:2_m_5_cm:None",
+                      "roughness length surface m" : "roughness_length_surface:0_m:m",
+                      "BRN_sign" : "BRN_sign:0_m:none",
+                      "BRN_sign_5cm" : "BRN_sign_5cm:none",
+                      "skin temperature K" : "skin_temperature:0_m:K",
+                      "skin potential temperature K" : "skin_potential_temperature:0_m:K",
+                      "skin saturation mixing ratio g_kg" : "skin_saturation_mixing_ratio:0_m:g_kg",
+                      "skin bulk richardson number" : "skin_bulk_richardson_number:10_m_0_m:None",
+                      "potential temperature skin change_2m K m-1" : "potential_temperature_skin_change:2_m:K_m-1",
+                      "potential temperature skin change_10m K m-1" : "potential_temperature_skin_change:10_m:K_m-1",
+                      "potential temperature skin change_15m K m-1" : "potential_temperature_skin_change:15_m:K_m-1",
+                      "potential temperature skin change_45m K m-1" : "potential_temperature_skin_change:45_m:K_m-1",
+                      "virtual potential temperature skin change_2m K m-1" : "virtual_potential_temperature_skin_change:2_m:K_m-1",
+                      "mixing ratio skin change_2m m_g kg-1 m-1" : "mixing_ratio_skin_change:2_m:g_kg-1_m-1"
+                      }
+        
+    result.rename(columns=rename_map, inplace=True)
+        
+    result.to_csv(out_file, columns=list(rename_map.values()), index_label="Time")
+    #result.to_csv(out_file, index_label="Time")    
     return
