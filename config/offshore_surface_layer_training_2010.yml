@@ -1,0 +1,67 @@
+data_file: "/d1/mlsurfacelayer/data/fino/derived/fino_derived.csv"
+out_dir: "/d1/mlsurfacelayer/data/fino/models"
+filter_counter_gradient: 0
+train_test_split_date: "2010-10-01"
+output_types: ["friction_velocity", "temp_scale" ]
+model_metric_types: ["mean_squared_error"]
+input_columns:
+  friction_velocity: [ "global_horizontal_irradiance:30_m:W_m-2",
+"zenith:0_m:degrees",
+"azimuth:0_m:degrees",
+"temperature:40_m:K",
+"water_sfc_temperature:0_m:K",
+"pressure:0_m:hPa",
+"potential_temperature:40_m:K",
+"relative_humidity:40_m:%",
+"wave_dir:0_m:degrees",
+"wave_height:0_m:m",
+"wave_period:0_m:s",
+"wind_speed:40_m:m_s-1",
+"wind_direction:40_m:degrees",
+"u_wind:40_m:m_s-1",
+"v_wind:40_m:m_s-1",
+"bulk_richardson:40_m:none",
+"potential_temperature_gradient:20_m:K_m-1",
+"wind_speed_gradient:20_m:s-1",
+"sensible_heat_flux:40_m:W_m-2"]
+  temp_scale: ["global_horizontal_irradiance:30_m:W_m-2",
+"zenith:0_m:degrees",
+"azimuth:0_m:degrees",
+"temperature:40_m:K",
+"water_sfc_temperature:0_m:K",
+"pressure:0_m:hPa",
+"potential_temperature:40_m:K",
+"relative_humidity:40_m:%",
+"wave_dir:0_m:degrees",
+"wave_height:0_m:m",
+"wave_period:0_m:s",
+"wind_speed:40_m:m_s-1",
+"wind_direction:40_m:degrees",
+"u_wind:40_m:m_s-1",
+"v_wind:40_m:m_s-1",
+"bulk_richardson:40_m:none",
+"potential_temperature_gradient:20_m:K_m-1",
+"wind_speed_gradient:20_m:s-1",
+"sensible_heat_flux:40_m:W_m-2"] 
+
+output_columns:
+  friction_velocity: "friction_velocity:40_m:m_s-1"
+  temp_scale: "temperature_scale:40_m:K"
+derived_columns: ["sensible_heat_flux:40_m:W_m-2",
+                  "bulk_richardson:40_m:none" ]
+stability_column: "bulk_richardson:40_m:none"
+model_config:
+  random_forest:
+    n_estimators: 100
+    max_features: 6
+    n_jobs: 4
+    max_leaf_nodes: 1024
+  neural_network:
+    hidden_layers: 2
+    hidden_neurons: 64
+    batch_size: 512
+    epochs: 10
+    lr: 0.0001
+    activation: tanh
+    l2_weight: 0.0
+
