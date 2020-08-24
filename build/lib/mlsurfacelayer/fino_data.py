@@ -52,15 +52,21 @@ def process_fino_data(csv_path, out_file, nan_column=("Value_Surface_Temperature
     derived_columns = ["global_horizontal_irradiance:30_m:W_m-2",
                        "zenith:0_m:degrees",
                        "azimuth:0_m:degrees",
+#                       "temperature:30_m:K", 
                        "temperature:40_m:K",
+                       "temperature:50_m:K",
                        "temperature:60_m:K",
                        "temperature:80_m:K",
                        "water_sfc_temperature:0_m:K", 
                        "pressure:0_m:hPa",
+                       "pressure:30_m:hPa",
                        "pressure:40_m:hPa",
+                       "pressure:50_m:hPa",
                        "pressure:60_m:hPa",
                        "pressure:80_m:hPa",
+#                      "potential_temperature:30_m:K",
                        "potential_temperature:40_m:K",
+                       "potential_temperature:50_m:K",
                        "potential_temperature:60_m:K",
                        "potential_temperature:80_m:K",
                        "skin_virtual_potential_temperature:0_m:K",
@@ -71,9 +77,13 @@ def process_fino_data(csv_path, out_file, nan_column=("Value_Surface_Temperature
                        "relative_humidity:40_m:%",
                        "relative_humidity:60_m:%",
                        "relative_humidity:80_m:%",
-                       "wave_dir:0_m:degrees",
+                       "wave_dir_linear_interp:0_m:degrees",
+                       "wave_dir_nearest_interp:0_m:degrees",
                        "wave_height:0_m:m",
                        "wave_period:0_m:s",
+                       "wave_phase_speed:0_m:m_s-1",
+                       #"wave_u:0_m:m_s-1",
+                       #"wave_v:0_m:m_s-1",
                        "wind_speed:40_m:m_s-1",
                        "wind_speed:60_m:m_s-1",
                        "wind_speed:80_m:m_s-1",
@@ -93,6 +103,12 @@ def process_fino_data(csv_path, out_file, nan_column=("Value_Surface_Temperature
                        "potential_temperature_gradient:40_m:K_m-1",
                        "wind_speed_gradient:20_m:s-1",
                        "wind_speed_gradient:40_m:s-1",
+                       "u_w:40_m:m2_s-2",
+                       "u_w:60_m:m2_s-2",
+                       "u_w:80_m:m2_s-2",
+                       "v_w:40_m:m2_s-2",
+                       "v_w:60_m:m2_s-2",
+                       "v_w:80_m:m2_s-2",
                        "friction_velocity:40_m:m_s-1",
                        "friction_velocity:60_m:m_s-1",
                        "friction_velocity:80_m:m_s-1",
@@ -127,9 +143,13 @@ def process_fino_data(csv_path, out_file, nan_column=("Value_Surface_Temperature
     #
     # Wave direction , height, period
     #
-    derived_data["wave_dir:0_m:degrees"] = raw_data["Value_wave_dir_linear_interp:Buoy:degree"]
+    derived_data["wave_dir_linear_interp:0_m:degrees"] = raw_data["Value_wave_dir_linear_interp:Buoy:degree"]
+    derived_data["wave_dir_nearest_interp:0_m:degrees"] = raw_data["Value_wave_dir_nearest_interp:Buoy:degree"]
     derived_data["wave_height:0_m:m"] = raw_data["Value_wave_height:Buoy:m"]
     derived_data["wave_period:0_m:s"] = raw_data["Value_wave_period_Mean:Buoy:s"]
+    derived_data["wave_phase_speed:0_m:m_s-1"] = derived_data["wave_period:0_m:s"]* 9.8/(2*np.pi)
+    #derived_data["wave_u:0_m:m_s-1"] =  -derived_data["wave_phase_speed:0_m:m_s-1"] * np.sin(2* np.pi * derived_data["wave_dir:0_m:degrees"])  
+    #derived_data["wave_v:0_m:m_s-1"] =  -derived_data["wave_phase_speed:0_m:m_s-1"] * np.cos(2 * np.pi * derived_data["wave_dir:0_m:degrees"])
 
     #
     # Copy raw variables at 40,60 80m 
@@ -150,22 +170,40 @@ def process_fino_data(csv_path, out_file, nan_column=("Value_Surface_Temperature
         #
         derived_data[f"u_wind:{height:d}_m:m_s-1"], derived_data[f"v_wind:{height:d}_m:m_s-1"] = wind_components(derived_data[f"wind_speed:{height:d}_m:m_s-1"], derived_data[f"wind_direction:{height:d}_m:degrees"]) 
        
+
+    for height in [30,40,50,60,80]:
         #
         # Pressure
         # 
         derived_data[f"pressure:{height:d}_m:hPa"] = raw_data[f"Pressure:{height:d}_m:Pa"]/100
 
     #    
-    # Temperature at 40,60,80m.  For 60 and 80m raw data interpolate linearly using measured values at 50 and 70m. 
+    # Temperature at 30,40,50,60,80m.  For 60 and 80m raw data interpolate linearly using measured values at 50 and 70m. 
     #
-    derived_data["temperature:40_m:K"] =  celsius_to_kelvin(raw_data["Temp:40_m:C"])
+    #for height in [30,40,50]:  Note that T30 may have probs
+    for height in [40,50]:
+        derived_data[f"temperature:{height:d}_m:K"] =  celsius_to_kelvin(raw_data[f"Temp:{height:d}_m:C"])
+    
     derived_data["temperature:60_m:K"] = celsius_to_kelvin( (raw_data['Temp:50_m:C'] + raw_data['Temp:70_m:C'] )/2 )
     derived_data["temperature:80_m:K"] = celsius_to_kelvin(raw_data['Temp:70_m:C'] + (raw_data['Temp:70_m:C'] - raw_data['Temp:50_m:C'] )/2 )
 
-    #    
-    # Relative humidity at 40,60,80m.  Interpolate linearly using measured values at 30 and 90m. 
     #
+    # flux components
+    #
+    derived_data["u_w:40_m:m2_s-2"] = raw_data["u_w:40_m:m2_s-2"]
+    derived_data["u_w:60_m:m2_s-2"] = raw_data["u_w:60_m:m2_s-2"]
+    derived_data["u_w:80_m:m2_s-2"] = raw_data["u_w:80_m:m2_s-2"]
+    derived_data["v_w:40_m:m2_s-2"] = raw_data["v_w:40_m:m2_s-2"]
+    derived_data["v_w:60_m:m2_s-2"] = raw_data["v_w:60_m:m2_s-2"]
+    derived_data["v_w:80_m:m2_s-2"] = raw_data["v_w:80_m:m2_s-2"]
+
+
+    #    
+    # Relative humidity at 30,40,50,60,80m.  Interpolate linearly using measured values at 30 and 90m. 
+    #
+    derived_data["relative_humidity:30_m:%"]=  raw_data['hygro_mean:30_m:%']
     derived_data["relative_humidity:40_m:%"] = raw_data['hygro_mean:30_m:%'] + (raw_data['hygro_mean:90_m:%'] - raw_data['hygro_mean:30_m:%'])/6 
+    derived_data["relative_humidity:50_m:%"] = raw_data['hygro_mean:30_m:%'] + (raw_data['hygro_mean:90_m:%'] - raw_data['hygro_mean:30_m:%'])/3
     derived_data["relative_humidity:60_m:%"] = raw_data['hygro_mean:30_m:%'] + (raw_data['hygro_mean:90_m:%'] - raw_data['hygro_mean:30_m:%'])/2
     derived_data["relative_humidity:80_m:%"] = raw_data['hygro_mean:90_m:%'] - (raw_data['hygro_mean:90_m:%'] - raw_data['hygro_mean:30_m:%'])/6
     
@@ -186,14 +224,19 @@ def process_fino_data(csv_path, out_file, nan_column=("Value_Surface_Temperature
 
       
     #
-    # Derive variables at 40,60 80m 
+    # Derive potential temperature 
     #
-    for height in [40, 60, 80]:
+    #for height in [30,40,50,60,80]:
+    for height in [40,50,60,80]:
         #
         # Potential Temperature
         #
         derived_data[f"potential_temperature:{height:d}_m:K"] = potential_temperature(derived_data[f"temperature:{height:d}_m:K"], derived_data[f"pressure:{height:d}_m:hPa"])
 
+    #
+    # Derive variables at 40,60 80m 
+    #
+    for height in [40,60,80]:
         #
         # Mixing ratio
         #
@@ -222,7 +265,7 @@ def process_fino_data(csv_path, out_file, nan_column=("Value_Surface_Temperature
     derived_data["friction_velocity:40_m:m_s-1"] = raw_data["ustar:40_m:u'w'"]
  
     for height in [60,80]:                                                
-        derived_data[f"friction_velocity:{height:d}_m:m_s-1"]= ((raw_data[f'u_w:{height:d}_m:m/s'])**2 +  (raw_data[f'v_w:{height:d}_m:m/s'])**2 )**(.25)    
+        derived_data[f"friction_velocity:{height:d}_m:m_s-1"]= ((raw_data[f'u_w:{height:d}_m:m2_s-2'])**2 +  (raw_data[f'v_w:{height:d}_m:m2_s-2'])**2 )**(.25)    
 
     derived_data["sensible_heat_flux:40_m:W_m-2"] = raw_data["Sensible Heat Flux:40_m:K_m_s-1"]
 
@@ -268,6 +311,52 @@ def load_derived_data(filename,
     data["test"] = all_data.loc[all_data.index >= pd.Timestamp(train_test_split_date)]
     return data
 
+def load_derived_data_random_test_train(filename, dropna=True, filter_counter_gradient=False): 
+    """
+    Load derived data file, remove NaN events, and split the data into training and test sets.
+
+    Args:
+        filename: Name of the derived data csv file.
+        train_test_start_date: begin date for data 
+        train_test_end_date: end date for data 
+        dropna: Whether to drop NaN fields or not.
+        filter_counter_gradient: Remove datapoints with counter gradient fluxes
+
+    Returns:
+        dict: data divided into input, output, and derived with training and testing sets
+    """
+    all_data = pd.read_csv(filename, index_col="Time", parse_dates=["Time"])
+    if dropna:
+        all_data = all_data.dropna()
+    if filter_counter_gradient:
+        all_data = filter_counter_gradient_data(all_data)
+    data = dict()
+
+    #
+    # For repeatability we use the same set of randomly generated weeks of the 
+    # year for testing. The compliment set is for training.
+    #
+    randomWeeks2010=[4, 8, 10, 15, 17, 23, 27, 29, 33, 39, 43, 47, 52]
+    randomWeeks2006=[3, 8, 9, 14, 20, 21, 27, 31, 35, 38, 43, 45, 51]
+
+
+    #
+    # For every month of data, choose a random week for testing and 
+    # leave the rest for trainin
+    #
+    
+    data["test"] = all_data.loc[(all_data.index.weekofyear.isin(randomWeeks2010)&(all_data.index.year == 2010)) |
+                                (all_data.index.weekofyear.isin(randomWeeks2006)&(all_data.index.year == 2006))  ]
+    data["train"] = all_data.loc[all_data.index.difference(data["test"].index) ]
+
+    train = pd.DataFrame()
+    train = all_data.loc[(all_data.index.weekofyear.isin(randomWeeks2010)&(all_data.index.year == 2010)) |
+                                (all_data.index.weekofyear.isin(randomWeeks2006)&(all_data.index.year == 2006))  ]
+    train.to_csv("/d1/FINO1/cubist_fino_train.csv", na_rep = '?')
+    test = pd.DataFrame()
+    test = all_data.loc[all_data.index.difference(data["test"].index) ]
+    test.to_csv("/d1/FINO1/cubist_fino_test.csv", na_rep = '?')
+    return data
 
 def filter_counter_gradient_data(data, gradient_column="potential_temperature_gradient:20_m:K_m-1",
                                  flux_column="sensible_heat_flux:40_m:W_m-2"):
