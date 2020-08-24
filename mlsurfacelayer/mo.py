@@ -1,6 +1,7 @@
 from math import log, atan, sqrt
 import numpy as np
 from numba import jit
+from scipy.optimize import *
 
 #@jit(nopython=True)
 def mo_similarity(u10, v10, tsk, t2, qsfc, q2, psfc, mavail=1, z0=0.01, zt0=0.001, z10=10.0, z2=2.0):
@@ -369,3 +370,76 @@ def mo_similarity_two_levels(u_low, v_low, u_high, v_high, t_low, t_high, pressu
         count += 1
     #
     return ustar, tstar, wthv0, zeta_high, phi_m, phi_h
+
+def psi_h(z,L,Ri):
+    
+    if Ri < 0:
+        return  2 * np.log( (1 + (1-z/L)**.5 )/2)
+    else:
+        return -z/L
+
+def psi_m(z,L,Ri):
+    if Ri < 0:
+        return (2*np.log((1+(1-z/L)**.25)/2) + np.log((1+(1-z/L)**.5)/2) - (2 * np.arctan((1-z/L)**.25)) + np.pi/2)
+    else:
+        return -z/L
+
+def mo_similarity_offshore(bulkRi, skinPotTemp, sfcTemp, wspd40, waveHt, potTemp40, wavePhaseSpd):
+
+    """
+    Calculate flux information based on Monin-Obukhov similarity theory by solving 
+    U(z_40 )=u_*/κ [ln⁡〖(z_40/z_0 )-ψ_m (z_40/L)+ψ_m (z_0/L)〗 ]
+    Θ(z_40 )=Θ_s-u_*/(g/T κL) [ln⁡〖(z_40/z_0 )-ψ_h (z_40/L)+ψ_h (z_0/L)〗 ]
+    for u* and L after making the following substitutions:
+    L =-(u_*^3)/(g/T u_* θ_* )=-(u_*^2)/(g/T θ_* )
+    z_0=3.35〖H_s (u_*/C_p   )〗^3.4 where C-p is wavePhase speed and z_0 is surface roughness
+     
+
+    Args:
+        bulkRi: bulk richardson number  
+        skinPotTemp : skin potential temperature in deg K
+        sfcTemp: water surface temperature in deg K 
+        wspd40: wind speed at 40m in units m/s
+        waveHt: wave height in m 
+        potTemp40: potential temperature at 40m in deg K
+        wavePhaseSpd : wave phase speed in m/s 
+
+    Returns:
+        ustar: friction velocity m/s
+        tstar: temperature scale K
+    """
+
+    #
+    # karman
+    #
+    k = .41
+
+    #
+    # gravity
+    #
+    g = 9.8
+
+    def myF(z):
+        ustar = z[0]
+        L = z[1]
+        z0 = 3.35 * waveHt * (ustar/wavePhaseSpd)**3.4
+        F = np.empty((2))
+        F[0] = skinPotTemp +  ustar/((g/sfcTemp)*k*L) *(np.log(40/z0)- psi_h(40,L,bulkRi) + psi_h(z0,L,bulkRi)) - potTemp40
+        F[1] = ustar/k * (np.log(40/z0) - psi_m(40,L,bulkRi) + psi_m(z0,L,bulkRi)) - wspd40
+        return F
+    if bulkRi < 0:
+        zGuess = np.array([.1, -1.0])
+    else:
+        zGuess = np.array([.1, 100])
+
+    z , infodict, ier, mesg = fsolve(myF, zGuess, full_output=True)
+    #print (z, " ", ier, mesg)
+    
+    ustar = np.nan
+    tstar = np.nan        
+    if ier == 1:
+        ustar = z[0]
+        L = z[1]
+        tstar = -ustar*ustar*sfcTemp/(g*L)
+
+    return ustar, tstar
