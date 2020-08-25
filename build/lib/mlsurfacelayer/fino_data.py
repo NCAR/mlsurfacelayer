@@ -336,7 +336,7 @@ def load_derived_data_random_test_train(filename, dropna=True, filter_counter_gr
     # For repeatability we use the same set of randomly generated weeks of the 
     # year for testing. The compliment set is for training.
     #
-    randomWeeks2010=[4, 8, 10, 15, 17, 23, 27, 29, 33, 39, 43, 47, 52]
+    randomWeeks2010=[4, 8, 10, 15, 19, 23, 27, 29, 33, 39, 43, 47, 52]
     randomWeeks2006=[3, 8, 9, 14, 20, 21, 27, 31, 35, 38, 43, 45, 51]
 
 
