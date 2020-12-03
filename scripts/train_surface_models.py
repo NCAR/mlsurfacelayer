@@ -15,7 +15,7 @@ from os.path import exists, join
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from mlsurfacelayer.metrics import mean_error, hellinger_distance, pearson_r2
 import pickle
-from keras.models import save_model
+from tensorflow.keras.models import save_model
 
 
 model_classes = {"random_forest": RandomForestRegressor,

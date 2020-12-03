@@ -37,7 +37,7 @@ $ conda config --set channel_priority strict
 Now, create a new conda environment with the main dependencies (except tensorflow) installed in it.
 The --yes command will automatically install everything without any extra confirmation from you.
 ```bash
-$ conda create -n sfc --yes -c conda-forge python=3.7 pip numpy scipy matplotlib pandas xarray pyyaml netcdf4 scikit-learn tqdm pytest
+$ conda env create -f environment.yml
 ```
 To activate the newly created environment, run the following command.
 ```bash
@@ -51,12 +51,6 @@ $ export PATH="$HOME/miniconda/envs/sfc/bin:$PATH"
 Verify that the correct Python environment is being used.
 ```bash
 $ which python
-```
-Install tensorflow using pip. There is a tensorflow channel on conda-forge, but I have experienced issues 
-with it in the past. For this package, I recommend using tensorflow 2.1.0, but any version of tensorflow
-beyond 2.0.0 should work (barring future significant API changes).
-```bash
-$ pip install tensorflow==2.1.0
 ```
 
 To install the mlsurfacelayer library in your python environment, go to the
@@ -128,10 +122,4 @@ stability_column: The column to use when splitting the data into stability regim
     * lr: Learning rate.
     * activation: Non-linear activation function. Options include "relu", "tanh", "elu", "selu"
     * l2_weight: Strength of the l2 norm (Ridge) regularization penalty. Can help with overfitting
-
-
-
-
-
-
 
