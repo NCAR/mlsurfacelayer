@@ -34,7 +34,7 @@ output_columns:
   moisture_scale: "moisture_scale:surface:g_kg-1"
 derived_columns: ["sensible_heat_flux:surface:W_m-2",
                   "latent_heat_flux:surface:W_m-2",
-                  "bulk_richardson:10 m:None",
+                  "bulk_richardson:10_m:None",
                   "air_density:10_m:kg_m-3",
                   "obukhov_length:surface:m"]
 stability_column: "bulk_richardson:10_m:None"

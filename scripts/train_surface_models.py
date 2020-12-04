@@ -68,14 +68,14 @@ def main():
     print("Monin Obukhov")
     for d, date in enumerate(data["test"].index):
 
-        mo_out = mo_similarity(data["test"].loc[date, "u wind_10 m_m s-1"],
-                               data["test"].loc[date, "v wind_10 m_m s-1"],
-                               data["test"].loc[date, "skin temperature_0 m_K"],
-                               data["test"].loc[date, "temperature_10 m_K"],
-                               data["test"].loc[date, "skin saturation mixing ratio_0 m_g kg-1"] / 1000.0,
-                               data["test"].loc[date, "mixing ratio_10 m_g kg-1"] / 1000.0,
-                               data["test"].loc[date, "pressure_2 m_hPa"],
-                               mavail=data["test"].loc[date, "moisture availability_3 cm_"],
+        mo_out = mo_similarity(data["test"].loc[date, "u_wind:10_m:m_s-1"],
+                               data["test"].loc[date, "v_wind:10_m:m_s-1"],
+                               data["test"].loc[date, "skin_temperature:0_m:K"],
+                               data["test"].loc[date, "temperature:10_m:K"],
+                               data["test"].loc[date, "skin_saturation_mixing_ratio:0_m:g_kg-1"] / 1000.0,
+                               data["test"].loc[date, "mixing_ratio:10_m:g_kg-1"] / 1000.0,
+                               data["test"].loc[date, "pressure:2_m:hPa"],
+                               mavail=data["test"].loc[date, "moisture_availability:3_cm:None"],
                                z10=10.0,
                                z2=10.0)
         model_predictions.loc[date, "friction_velocity-mo"] = mo_out[0]
