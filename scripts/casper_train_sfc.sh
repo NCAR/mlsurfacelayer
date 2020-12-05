@@ -9,3 +9,4 @@
 export PATH="$HOME/miniconda3/envs/sfc/bin:$PATH"
 cd ~/mlsurfacelayer/scripts/
 python -u train_surface_models.py ../config/surface_layer_training_fasteddy_cabauw_20201203.yml 
+python -u train_surface_models.py ../config/surface_layer_training_fasteddy_idaho_20201203.yml

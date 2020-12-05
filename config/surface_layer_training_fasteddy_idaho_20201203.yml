@@ -1,7 +1,7 @@
-data_file: "/glade/p/cisl/aiml/fasteddy/cabauw_derived_data_20201203.csv"
-out_dir: "/glade/p/cisl/aiml/fasteddy/cabauw_surface_layer_models_20201203/"
+data_file: "/glade/p/cisl/aiml/fasteddy/idaho_derived_data_20201203.csv"
+out_dir: "/glade/p/cisl/aiml/fasteddy/idaho_surface_layer_models_20201203/"
 filter_counter_gradient: 0
-train_test_split_date: "2013-01-01"
+train_test_split_date: "2017-01-01"
 output_types: ["friction_velocity", "temperature_scale", "moisture_scale"]
 model_metric_types: ["mean_squared_error", "mean_absolute_error", "mean_error", "pearson_r2", "hellinger_distance"]
 input_columns:
@@ -16,14 +16,14 @@ input_columns:
                        'bulk_richardson:10_m:None',
                        'potential_temperature:10_m:K',
                        'skin_potential_temperature:0_m:K',]
-  moisture_scale: [ 'wind_speed:10_m:m_s-1',
-                    'potential_temperature_skin_change:10_m:K_m-1',
-                    'bulk_richardson:10_m:None',
-                    'potential_temperature:10_m:K',
-                    'skin_potential_temperature:0_m:K',
-                    'relative_humidity:2_m:%',
-                    "moisture_availability:soil:None",
-                    "mixing_ratio_skin_change:2_m:g_kg-1_m-1"]
+  moisture_scale: ['wind_speed:10_m:m_s-1',
+                   'potential_temperature_skin_change:10_m:K_m-1',
+                   'bulk_richardson:10_m:None',
+                   'potential_temperature:10_m:K',
+                   'skin_potential_temperature:0_m:K',
+                   'relative_humidity:2_m:%',
+                   "moisture_availability:soil:None",
+                   "mixing_ratio_skin_change:2_m:g_kg-1_m-1"]
 output_columns:
   friction_velocity: "friction_velocity:surface:m_s-1"
   temperature_scale: "temperature_scale:surface:K"

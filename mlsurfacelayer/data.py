@@ -105,7 +105,7 @@ def process_cabauw_data(csv_path, out_file, nan_column=("soil_water", "TH03"), c
                        "soil potential temperature_4 cm_K",
                        "soil water content_3 cm_m3 m-3",
                        # "soil water content_8 cm_m3 m-3",
-                       "moisture availability_3 cm_",
+                       "moisture availability_soil_",
                        # "moisture availability_8 cm_",
                        "bulk richardson_10 m_",
                        "bulk richardson_2 m_",
@@ -168,7 +168,7 @@ def process_cabauw_data(csv_path, out_file, nan_column=("soil_water", "TH03"), c
                                                                               derived_data["pressure_2 m_hPa"])
     derived_data["soil water content_3 cm_m3 m-3"] = combined_data[("soil_water", "TH03")]
     # derived_data["soil water content_8 cm_m3 m-3"] = combined_data[("soil_water", "TH08")]
-    derived_data["moisture availability_3 cm_"] = moisture_availability(derived_data["soil water content_3 cm_m3 m-3"])
+    derived_data["moisture availability_soil_"] = moisture_availability(derived_data["soil water content_3 cm_m3 m-3"])
     # derived_data["moisture availability_8 cm_"] = moisture_availability(derived_data["soil water content_8 cm_m3 m-3"])
     derived_data["upward longwave irradiance_0 m_W m-2"] = combined_data[("irrad", "LWU")]
     derived_data["downward longwave irradiance_0 m_W m-2"] = combined_data[("irrad", "LWD")]
@@ -321,10 +321,10 @@ def process_idaho_data(csv_path, out_file, idaho_lat=43.5897, idaho_lon=-112.939
     Returns:
 
     """
-    idaho_flux_data = pd.read_csv(join(csv_path, "FRD_ECFlux_2015-2017.csv"), na_values=[-9999.0])
-    idaho_met_data = pd.read_csv(join(csv_path, "FRD_TallTower_Met_2015-2017.csv"), na_values=[-9999.0])
+    idaho_flux_data = pd.read_csv(join(csv_path, "FRD_ECFlux_2015-2017.csv"), na_values=[-999.0, -9999.0])
+    idaho_met_data = pd.read_csv(join(csv_path, "FRD_TallTower_Met_2015-2017.csv"), na_values=[-999.0, -9999.0])
     idaho_rad_data = pd.concat([pd.read_csv(join(csv_path, f"FRD_FLXStation_radiation_{year:d}.csv"),
-                                            na_values=[-999]) for year in range(2015, 2018)])
+                                            na_values=[-999, -9999]) for year in range(2015, 2018)])
     idaho_flux_no_missing = idaho_flux_data.dropna(axis=0, how="any")
     idaho_met_no_missing = idaho_met_data.dropna(axis=0, how="any")
     idaho_rad_no_missing = idaho_rad_data.dropna(axis=0, how="any")
@@ -438,6 +438,7 @@ def process_idaho_data(csv_path, out_file, idaho_lat=43.5897, idaho_lon=-112.939
                                                                    result['2m mixing ratio g_kg'],
                                                                    result['skin potential temperature K'],
                                                                    result['10m Wind Speed m/s'])
+    result["moisture_availability:soil:None"] = moisture_availability(result["5cm Water Content"])
     #
     # Add gradients
     #
@@ -484,11 +485,11 @@ def process_idaho_data(csv_path, out_file, idaho_lat=43.5897, idaho_lon=-112.939
                   "Solar Rad w/m^2": "GHI_met_tower:0_m:W_m-2",
                   "BP inches Hg": "BP_inches:0_m:inches_hg",
                   "Rain inches": "Rain:0_m:inches",
-                  "5cm Water Content": "Water_Content:5_cm:%",
-                  "10cm Water Content": "Water_Content:10_cm:%",
-                  "20cm Water Content": "Water_Content:20_cm:%",
-                  "50cm Water Content": "Water_Content:50_cm:%",
-                  "100cm Water Content": "Water_Content:100_cm:%",
+                  "5cm Water Content": "Water_Content:5_cm:m3_m-3",
+                  "10cm Water Content": "Water_Content:10_cm:m3_m-3",
+                  "20cm Water Content": "Water_Content:20_cm:m3_m-3",
+                  "50cm Water Content": "Water_Content:50_cm:m3_m-3",
+                  "100cm Water Content": "Water_Content:100_cm:m3_m-3",
                   "5cm Soil Temp C": "Soil_Temp:5_cm:C",
                   "10cm Soil Temp C": "Soil_Temp:10_cm:C",
                   "20cm Soil Temp C": "Soil_Temp:20_cm:C",
