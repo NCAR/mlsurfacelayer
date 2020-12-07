@@ -73,7 +73,7 @@ def main():
                                data["test"].loc[date, "skin_temperature:0_m:K"],
                                data["test"].loc[date, "temperature:10_m:K"],
                                data["test"].loc[date, "skin_saturation_mixing_ratio:0_m:g_kg-1"] / 1000.0,
-                               data["test"].loc[date, "mixing_ratio:10_m:g_kg-1"] / 1000.0,
+                               data["test"].loc[date, "mixing_ratio:2_m:g_kg-1"] / 1000.0,
                                data["test"].loc[date, "pressure:2_m:hPa"],
                                mavail=data["test"].loc[date, "moisture_availability:soil:None"],
                                z10=10.0,
@@ -107,7 +107,8 @@ def main():
         importances[output_type] = {}
         scaled_train_input = input_scalers[output_type].fit_transform(data["train"][input_columns[output_type]])
         scaled_test_input = input_scalers[output_type].transform(data["test"][input_columns[output_type]])
-        scaled_test_input.to_csv(join(out_dir, f"scaled_test_inputs_{output_type}.csv"))
+        scaled_test_input_df = pd.DataFrame(scaled_test_input, columns=input_columns[output_type])
+        scaled_test_input_df.to_csv(join(out_dir, f"scaled_test_inputs_{output_type}.csv"))
         for model_name, model_config in model_configs.items():
             model_objects[model_name] = {}
             print("Training", output_type, model_name)
