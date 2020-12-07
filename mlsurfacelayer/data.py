@@ -77,12 +77,15 @@ def process_cabauw_data(csv_path, out_file, nan_column=("soil_water", "TH03"), c
                        "skin potential temperature_0 m_K",
                        "skin saturation mixing ratio_0 m_g kg-1",
                        "skin virtual potential temperature_0 m_K",
+                       "potential temperature skin change_2 m_K m-1",
                        "potential temperature skin change_10 m_K m-1",
                        "potential temperature skin change_20 m_K m-1",
                        "potential temperature skin change_40 m_K m-1",
+                       "virtual potential temperature skin change_2 m_K m-1",
                        "virtual potential temperature skin change_10 m_K m-1",
                        "virtual potential temperature skin change_20 m_K m-1",
                        "virtual potential temperature skin change_40 m_K m-1",
+                       "mixing ratio skin change_2 m_g kg-1 m-1",
                        "mixing ratio skin change_10 m_g kg-1 m-1",
                        "mixing ratio skin change_20 m_g kg-1 m-1",
                        "mixing ratio skin change_40 m_g kg-1 m-1",
@@ -183,7 +186,7 @@ def process_cabauw_data(csv_path, out_file, nan_column=("soil_water", "TH03"), c
     derived_data["skin virtual potential temperature_0 m_K"] = virtual_temperature(
         derived_data["skin potential temperature_0 m_K"],
         derived_data["skin saturation mixing ratio_0 m_g kg-1"])
-    for height in [10, 20, 40]:
+    for height in [2, 10, 20, 40]:
         derived_data[f"potential temperature skin change_{height:d} m_K m-1"] = \
             (derived_data["skin potential temperature_0 m_K"] - derived_data[f"potential temperature_{height:d} m_K"]) \
             / height
