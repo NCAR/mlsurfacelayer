@@ -552,7 +552,8 @@ def process_idaho_data(csv_path, out_file, idaho_lat=43.5897, idaho_lon=-112.939
                   "potential temperature skin change_15m K m-1": "potential_temperature_skin_change:15_m:K_m-1",
                   "potential temperature skin change_45m K m-1": "potential_temperature_skin_change:45_m:K_m-1",
                   "virtual potential temperature skin change_2m K m-1": "virtual_potential_temperature_skin_change:2_m:K_m-1",
-                  "mixing ratio skin change_2m m_g kg-1 m-1": "mixing_ratio_skin_change:2_m:g_kg-1_m-1"
+                  "mixing ratio skin change_2m m_g kg-1 m-1": "mixing_ratio_skin_change:2_m:g_kg-1_m-1",
+                  "moisture_availability:soil:None": "moisture_availability:soil:None"
                   }
 
     result.rename(columns=rename_map, inplace=True)
