@@ -1,5 +1,10 @@
 from setuptools import setup
 
+
+with open("requirements.txt") as req:
+    requirements = [x.strip() for x in req.readlines()]
+
+
 if __name__ == "__main__":
     setup(name="mlsurfacelayer",
           version="0.1",
@@ -9,14 +14,4 @@ if __name__ == "__main__":
           license="MIT",
           url="https://github.com/NCAR/mlsurfacelayer",
           packages=["mlsurfacelayer"],
-          install_requires=["numpy",
-                            "numba",
-                            "scipy",
-                            "pandas",
-                            "scikit-learn",
-                            "matplotlib",
-                            "xarray",
-                            "netcdf4",
-                            "tensorflow",
-                            "keras",
-                            "pyyaml"])
+          install_requires=requirements)

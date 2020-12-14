@@ -1,0 +1,15 @@
+numpy
+matplotlib
+scipy
+pandas
+scikit-learn
+pyyaml
+tensorflow
+xarray
+netcdf4
+jupyter
+dask
+distributed
+numba
+pvlib
+tqdm

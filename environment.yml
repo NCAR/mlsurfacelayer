@@ -1,0 +1,23 @@
+name: sfc
+channels:
+    - conda-forge
+dependencies:
+    - python=3.8
+    - numpy=1.18.*
+    - scipy
+    - matplotlib
+    - xarray
+    - netcdf4
+    - pyyaml
+    - pandas
+    - scikit-learn
+    - pytest
+    - jupyter
+    - dask
+    - distributed
+    - pip
+    - numba
+    - pvlib-python
+    - tqdm
+    - pip:
+        - tensorflow

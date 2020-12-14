@@ -1,0 +1,51 @@
+data_file: "/glade/p/cisl/aiml/fasteddy/cabauw_derived_data_20201203.csv"
+out_dir: "/glade/p/cisl/aiml/fasteddy/cabauw_surface_layer_models_20201203/"
+filter_counter_gradient: 0
+train_test_split_date: "2013-01-01"
+output_types: ["friction_velocity", "temperature_scale", "moisture_scale"]
+model_metric_types: ["mean_squared_error", "mean_absolute_error", "mean_error", "pearson_r2", "hellinger_distance"]
+input_columns:
+  friction_velocity: ['wind_speed:10_m:m_s-1',
+                      'potential_temperature_skin_change:10_m:K_m-1',
+                      'bulk_richardson:10_m:None',
+                      'potential_temperature:10_m:K',
+                      'skin_potential_temperature:0_m:K',
+                      ]
+  temperature_scale: ['wind_speed:10_m:m_s-1',
+                       'potential_temperature_skin_change:10_m:K_m-1',
+                       'bulk_richardson:10_m:None',
+                       'potential_temperature:10_m:K',
+                       'skin_potential_temperature:0_m:K',]
+  moisture_scale: [ 'wind_speed:10_m:m_s-1',
+                    'potential_temperature_skin_change:10_m:K_m-1',
+                    'bulk_richardson:10_m:None',
+                    'potential_temperature:10_m:K',
+                    'skin_potential_temperature:0_m:K',
+                    'relative_humidity:2_m:%',
+                    "moisture_availability:soil:None",
+                    "mixing_ratio_skin_change:2_m:g_kg-1_m-1"]
+output_columns:
+  friction_velocity: "friction_velocity:surface:m_s-1"
+  temperature_scale: "temperature_scale:surface:K"
+  moisture_scale: "moisture_scale:surface:g_kg-1"
+derived_columns: ["sensible_heat_flux:surface:W_m-2",
+                  "latent_heat_flux:surface:W_m-2",
+                  "bulk_richardson:10_m:None",
+                  "air_density:10_m:kg_m-3"]
+stability_column: "bulk_richardson:10_m:None"
+model_config:
+  random_forest:
+    n_estimators: 100
+    max_features: "sqrt"
+    n_jobs: 4
+    max_leaf_nodes: 1024
+  neural_network:
+    hidden_layers: 2
+    hidden_neurons: 64
+    batch_size: 256
+    epochs: 20
+    lr: 0.0001
+    activation: relu
+    l2_weight: 1.0e-4
+
+
