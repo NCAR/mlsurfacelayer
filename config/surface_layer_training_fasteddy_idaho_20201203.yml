@@ -37,16 +37,16 @@ stability_column: "bulk_richardson:10_m:None"
 model_config:
   random_forest:
     n_estimators: 100
-    max_features: "sqrt"
+    max_features: 3
     n_jobs: 4
-    max_leaf_nodes: 1024
+    max_leaf_nodes: 4096
   neural_network:
     hidden_layers: 2
     hidden_neurons: 64
-    batch_size: 256
+    batch_size: 128
     epochs: 20
     lr: 0.0001
-    activation: relu
-    l2_weight: 1.0e-4
+    activation: "selu"
+    l2_weight: 1.0e-6
 
 
