@@ -115,7 +115,7 @@ contains
            !     print*, "selu"
                 do i=1,size(input, 1)
                     do j=1, size(input,2)
-                        output(i, j) = selu_lambda * ( dmax1(output(i, j),zero) + dmin1(selu_alpha*(exp(output(i, j))-1.0),zero) )
+                        output(i, j) = selu_lambda * ( dmax1(input(i, j),zero) + dmin1(selu_alpha*(exp(input(i, j))-1.0),zero) )
                     end do
                 end do
             case (5)
