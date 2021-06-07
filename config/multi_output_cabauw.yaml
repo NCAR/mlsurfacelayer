@@ -1,5 +1,5 @@
-data_file: "/Users/cbecker/Desktop/ML_surface_layer/MLSurface_data/cabauw_derived_data_20201203.csv"
-out_dir: "/Users/cbecker/Desktop/Projects/mlsurfacelayer/multi_output_cabauw/test/"
+data_file: "/glade/p/cisl/aiml/fasteddy/cabauw_derived_data_20201203.csv"
+out_dir: "/glade/work/cbecker/mlsurfacelayer/multi_output_cabauw/test/"
 filter_counter_gradient: 0
 train_test_split_date: "2013-01-01"
 output_types: ["friction_velocity", "temperature_scale"]  # "moisture_scale"]
