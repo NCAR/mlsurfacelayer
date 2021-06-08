@@ -40,6 +40,7 @@ def main():
     output_types = config["output_types"]
     input_columns = config["input_columns"]
     output_columns = config["output_columns"]
+    output_column_list = [output_columns[output_type] for output_type in output_types]
     derived_columns = config["derived_columns"]
     model_configs = config["model_config"]
     model_metric_types = config["model_metric_types"]
@@ -51,8 +52,6 @@ def main():
     if not exists(out_dir):
         makedirs(out_dir)
 
-    input_scalers = {}
-    importances = {}
     model_objects = {}
     pred_columns = []
 
@@ -80,60 +79,59 @@ def main():
                                z0=0.017,
                                z10=10.0,
                                z2=10.0)
-        model_predictions.loc[date, "friction_velocity-mo"] = mo_out[0]
-        model_predictions.loc[date, "temperature_scale-mo"] = mo_out[1]
-        model_predictions.loc[date, "moisture_scale-mo"] = mo_out[2] * 1000.0
+        for i, output_type in enumerate(output_types):
+            mo_string = output_type + '-mo'
+            if output_type != 'moisture_scale':
+                model_predictions.loc[date, mo_string] = mo_out[i]
+            else:
+                model_predictions.loc[date, mo_string] = mo_out[i] * 1000
 
-        for output_type in output_types:
+    input_scaler, output_scaler = StandardScaler(), StandardScaler()
+    scaled_train_input = input_scaler.fit_transform(data["train"][input_columns])
+    scaled_train_output = output_scaler.fit_transform(data["train"][output_column_list])
+    scaled_test_input = input_scaler.transform(data["test"][input_columns])
 
-            model_predictions.loc[:, output_columns[output_type]] = data["test"][output_columns[output_type]]
-            input_scalers[output_type] = StandardScaler()
-            importances[output_type] = {}
-            scaled_train_input = input_scalers[output_type].fit_transform(data["train"][input_columns])
-            scaled_test_input = input_scalers[output_type].transform(data["test"][input_columns])
-            scaled_test_input_df = pd.DataFrame(scaled_test_input, columns=input_columns)
+    scaled_test_input_df = pd.DataFrame(scaled_test_input, columns=input_columns)
 
-            full_model = output_type + "-" + "mo"
-            for model_metric in model_metric_types:
-                model_metrics.loc[full_model, model_metric] = metrics[model_metric](
-                    data["test"][output_columns[output_type]].values, model_predictions[full_model].values)
+    for output_type in output_types:
 
+        model_predictions.loc[:, output_columns[output_type]] = data["test"][output_columns[output_type]]
+        full_model = output_type + "-" + "mo"
+        for model_metric in model_metric_types:
+            model_metrics.loc[full_model, model_metric] = metrics[model_metric](
+                data["test"][output_columns[output_type]].values, model_predictions[full_model].values)
 
     for model_name, model_config in model_configs.items():
         model_objects[model_name] = {}
         model_objects[model_name] = model_classes[model_name](**model_config)
         if model_name == "random_forest":
-            model_objects[model_name].fit(data["train"][input_columns].values,
-                                          data["train"][[*output_columns.values()]].values)
-        else:
-            model_objects[model_name].fit(scaled_train_input,
-                                          data["train"][[*output_columns.values()]].values)
+            model_objects[model_name].fit(data["train"][input_columns],
+                                          data["train"][output_column_list])
+
+            preds = model_objects[model_name].predict(data["test"][input_columns]).reshape(
+                                            len(data['test']), len(output_column_list))
+        elif model_name == 'neural_network':
+            model_objects[model_name].fit(scaled_train_input, scaled_train_output)
+
+            preds = output_scaler.inverse_transform(model_objects[model_name].predict(scaled_test_input).reshape(
+                    len(scaled_test_input), len(output_column_list)))
 
         for i, output_type in enumerate(output_types):
             print("Predicting", output_type, model_name)
             full_model = output_type + "-" + model_name
-            unstable = data["train"][stability_column] < -0.02
-            stable = data["train"][stability_column] > 0.02
-            neutral = (data["train"][stability_column] >= -0.02) & (data["train"][stability_column] <= 0.02)
-            if model_name == "random_forest":
-                model_predictions.loc[:, full_model] = model_objects[
-                                                           model_name].predict(data["test"][input_columns]).reshape(
-                    len(data['test']), len(output_columns))[:, i]
 
-            else:
-                model_predictions.loc[:, full_model] = model_objects[
-                                                           model_name].predict(scaled_test_input).reshape(
-                    len(scaled_test_input), len(output_columns))[:, i]
+            model_predictions.loc[:, full_model] = preds[:, i]
 
             for model_metric in model_metric_types:
                 model_metrics.loc[full_model, model_metric] = metrics[
                     model_metric](data["test"][output_columns[output_type]].values,
                                   model_predictions[full_model].values)
 
-
+    model_objects['neural_network'].save_fortran_model(join(out_dir, "_fortran.nc"))
     model_metrics.to_csv(join(out_dir, "_metrics.csv"))
-    model_objects[model_name].save_fortran_model(join(out_dir, "_fortran.nc"))
-    save_scaler_csv(input_scalers[output_type], input_columns, join(out_dir, f"scale_values.csv"))
+    model_predictions.to_csv(join(out_dir, "_predictions.csv"))
+    save_scaler_csv(input_scaler, input_columns, join(out_dir, f"input_scale_values.csv"))
+    save_scaler_csv(output_scaler, output_column_list, join(out_dir, f"output_scale_values.csv"))
 
 
 if __name__ == "__main__":

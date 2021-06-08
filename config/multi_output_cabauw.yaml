@@ -1,5 +1,5 @@
 data_file: "/glade/p/cisl/aiml/fasteddy/cabauw_derived_data_20201203.csv"
-out_dir: "/glade/work/cbecker/mlsurfacelayer/multi_output_cabauw/test/"
+out_dir: "/glade/scratch/cbecker/surface_layer/multi_output_cabauw/test/"
 filter_counter_gradient: 0
 train_test_split_date: "2013-01-01"
 output_types: ["friction_velocity", "temperature_scale"]  # "moisture_scale"]
@@ -13,8 +13,8 @@ input_columns: [
 
 output_columns:
   friction_velocity: "friction_velocity:surface:m_s-1"
-#  temperature_scale: "temperature_scale:surface:K"
-#  moisture_scale: "moisture_scale:surface:g_kg-1"
+  temperature_scale: "temperature_scale:surface:K"
+  moisture_scale: "moisture_scale:surface:g_kg-1"
 
 derived_columns: ["sensible_heat_flux:surface:W_m-2",
                   "latent_heat_flux:surface:W_m-2",
@@ -26,7 +26,7 @@ stability_column: "bulk_richardson:10_m:None"
 model_config:
   neural_network:
     hidden_layers: 2
-    hidden_neurons: 64
+    hidden_neurons: 128
     batch_size: 128
     epochs: 10
     lr: 0.0001
