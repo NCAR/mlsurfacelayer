@@ -16,6 +16,7 @@ from matplotlib.colors import LogNorm
 import joblib
 from os import makedirs
 import matplotlib.pyplot as plt
+from tensorflow.keras.models import save_model
 
 metrics = {"mean_squared_error": mean_squared_error,
            "mean_absolute_error": mean_absolute_error,
@@ -127,9 +128,10 @@ def main():
                     model_metric](data["test"][output_columns[output_type]].values,
                                   model_predictions[full_model].values)
 
-    model_objects['neural_network'].save_fortran_model(join(out_dir, "_fortran.nc"))
-    model_metrics.to_csv(join(out_dir, "_metrics.csv"))
-    model_predictions.to_csv(join(out_dir, "_predictions.csv"))
+    model_objects['neural_network'].save_fortran_model(join(out_dir, "NN_fortran.nc"))
+    save_model(model_objects['neural_network'].model, join(out_dir, "NN_tensorflow.h5"))
+    model_metrics.to_csv(join(out_dir, "NN_metrics.csv"))
+    model_predictions.to_csv(join(out_dir, "NN_predictions.csv"))
     save_scaler_csv(input_scaler, input_columns, join(out_dir, f"input_scale_values.csv"))
     save_scaler_csv(output_scaler, output_column_list, join(out_dir, f"output_scale_values.csv"))
 
