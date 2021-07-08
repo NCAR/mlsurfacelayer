@@ -1,0 +1,35 @@
+data_file: "/glade/p/cisl/aiml/fasteddy/cabauw_derived_data_20201203.csv"
+out_dir: "/glade/scratch/cbecker/surface_layer/multi_output_cabauw/test/"
+filter_counter_gradient: 0
+train_test_split_date: "2013-01-01"
+output_types: ["friction_velocity", "temperature_scale"]  # "moisture_scale"]
+model_metric_types: ["mean_squared_error", "mean_absolute_error", "mean_error", "pearson_r2", "hellinger_distance"]
+input_columns: [
+               'wind_speed:10_m:m_s-1',
+               'potential_temperature_skin_change:10_m:K_m-1',
+               'bulk_richardson:10_m:None',
+               'potential_temperature:10_m:K',
+               'skin_potential_temperature:0_m:K']
+
+output_columns:
+  friction_velocity: "friction_velocity:surface:m_s-1"
+  temperature_scale: "temperature_scale:surface:K"
+  moisture_scale: "moisture_scale:surface:g_kg-1"
+
+derived_columns: ["sensible_heat_flux:surface:W_m-2",
+                  "latent_heat_flux:surface:W_m-2",
+                  "bulk_richardson:10_m:None",
+                  "air_density:10_m:kg_m-3"]
+
+stability_column: "bulk_richardson:10_m:None"
+
+model_config:
+  neural_network:
+    hidden_layers: 2
+    hidden_neurons: 128
+    batch_size: 128
+    epochs: 10
+    lr: 0.0001
+    activation: "selu"
+    l2_weight: 1.0e-6
+    verbose: 1
