@@ -96,6 +96,26 @@ def temperature_scale(sensible_heat_flux_W_m2, air_density_kg_m3, friction_veloc
                                   np.maximum(friction_velocity_m_s, min_friction_velocity))
 
 
+def kinematic_sensible_heat_flux(sensible_heat_flux_W_m2, air_density_kg_m3):
+    """
+    Calculate kinematic sensible heat flux <w' theta'> from the raw sensible heat flux.
+
+    Args:
+        sensible_heat_flux_W_m2: Sensible heat flux in W m-2 units
+        air_density_kg_m3: Density of air derived from near surface temperature and pressure
+
+    Returns:
+        kinematic sensible heat flux in K m s-1
+    """
+    return sensible_heat_flux_W_m2 / (air_density_kg_m3 * 287 * 7.0 / 2.0)
+
+
+def kinematic_latent_heat_flux(latent_heat_flux_W_m2, air_density_kg_m3):
+    latent_heat_of_vaporization_J_kg = 2264705.0
+    g_per_kg = 1000.0
+    return latent_heat_flux_W_m2 / (latent_heat_of_vaporization_J_kg * air_density_kg_m3) * g_per_kg
+
+
 def moisture_scale(latent_heat_flux_W_m2, air_density_kg_m3, friction_velocity_m_s,
                    min_friction_velocity=0.001, min_latent_heat_flux_mag=0.001):
     """

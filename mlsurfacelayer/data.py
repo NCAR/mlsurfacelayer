@@ -156,6 +156,9 @@ def process_cabauw_data(csv_path, out_file, nan_column=("soil_water", "TH03"), c
     derived_data["air density_10 m_kg m-3"] = air_density(virtual_temperature(derived_data["temperature_10 m_K"],
                                                                               derived_data["mixing ratio_10 m_g kg-1"]),
                                                           derived_data["pressure_2 m_hPa"])
+    derived_data["air density_2 m_kg m-3"] = air_density(virtual_temperature(derived_data["temperature_2 m_K"],
+                                                                              derived_data["mixing ratio_2 m_g kg-1"]),
+                                                          derived_data["pressure_2 m_hPa"])
     for height in [10, 20, 40]:
         derived_data["wind speed_{0:d} m_m s-1".format(height)] = combined_data[("tower", "F_{0:d}m".format(height))]
         derived_data["wind direction_{0:d} m_degrees".format(height)] = combined_data[
@@ -171,7 +174,8 @@ def process_cabauw_data(csv_path, out_file, nan_column=("soil_water", "TH03"), c
                                                                               derived_data["pressure_2 m_hPa"])
     derived_data["soil water content_3 cm_m3 m-3"] = combined_data[("soil_water", "TH03")]
     # derived_data["soil water content_8 cm_m3 m-3"] = combined_data[("soil_water", "TH08")]
-    derived_data["moisture availability_soil_"] = moisture_availability(derived_data["soil water content_3 cm_m3 m-3"])
+    derived_data["moisture availability_soil_"] = moisture_availability(derived_data["soil water content_3 cm_m3 m-3"],
+                                                                        field_capacity=0.82)
     # derived_data["moisture availability_8 cm_"] = moisture_availability(derived_data["soil water content_8 cm_m3 m-3"])
     derived_data["upward longwave irradiance_0 m_W m-2"] = combined_data[("irrad", "LWU")]
     derived_data["downward longwave irradiance_0 m_W m-2"] = combined_data[("irrad", "LWD")]
@@ -188,20 +192,21 @@ def process_cabauw_data(csv_path, out_file, nan_column=("soil_water", "TH03"), c
         derived_data["skin saturation mixing ratio_0 m_g kg-1"])
     for height in [2, 10, 20, 40]:
         derived_data[f"potential temperature skin change_{height:d} m_K m-1"] = \
-            (derived_data["skin potential temperature_0 m_K"] - derived_data[f"potential temperature_{height:d} m_K"]) \
+            (derived_data[f"potential temperature_{height:d} m_K"] - derived_data["skin potential temperature_0 m_K"]) \
             / height
         derived_data[f"virtual potential temperature skin change_{height:d} m_K m-1"] = \
-            (derived_data["skin virtual potential temperature_0 m_K"] - derived_data[
-                f"virtual potential temperature_{height:d} m_K"]) \
+            (derived_data[f"virtual potential temperature_{height:d} m_K"] - derived_data["skin virtual potential temperature_0 m_K"]) \
             / height
         derived_data[f"mixing ratio skin change_{height:d} m_g kg-1 m-1"] = \
-            (derived_data["skin saturation mixing ratio_0 m_g kg-1"] - derived_data[
-                f"mixing ratio_{height:d} m_g kg-1"]) \
+            derived_data["moisture availability_soil_"] * (derived_data[f"mixing ratio_{height:d} m_g kg-1"] -
+              derived_data["skin saturation mixing ratio_0 m_g kg-1"]) \
             / height
     derived_data["friction velocity_surface_m s-1"] = np.maximum(combined_data[("flux", "UST")], 0.001)
     derived_data["sensible heat flux_surface_W m-2"] = combined_data[("flux", "H")]
     derived_data["latent heat flux_surface_W m-2"] = combined_data[("flux", "LE")]
     derived_data["soil heat flux_surface_W m-2"] = combined_data[("flux", "G0")]
+    derived_data["kinematic sensible heat flux_surface_K m s-1"] = kinematic_sensible_heat_flux(derived_data["sensible heat flux_surface_W m-2"], derived_data["air density_10 m_kg m-3"])
+    derived_data["kinematic latent heat flux_surface_g kg-1 m s-1"] = kinematic_latent_heat_flux(derived_data["latent heat flux_surface_W m-2"], derived_data["air density_10 m_kg m-3"])
     if reflect_counter_gradient:
         sh_counter_gradient = (derived_data[f"potential temperature skin change_10 m_K m-1"] *
                                derived_data["sensible heat flux_surface_W m-2"]) < 0
@@ -441,19 +446,23 @@ def process_idaho_data(csv_path, out_file, idaho_lat=43.5897, idaho_lon=-112.939
                                                                    result['2m mixing ratio g_kg'],
                                                                    result['skin potential temperature K'],
                                                                    result['10m Wind Speed m/s'])
-    result["moisture_availability:soil:None"] = moisture_availability(result["5cm Water Content"])
+    result["moisture_availability:soil:None"] = moisture_availability(result["5cm Water Content"], field_capacity=0.41)
     #
     # Add gradients
     #
     for height in [2, 10, 15, 45]:
         result[f"potential temperature skin change_{height:d}m K m-1"] = \
-            (result['skin potential temperature K'] - result[f"{height:d}m potential temperature K"]) \
+            (result[f"{height:d}m potential temperature K"] - result['skin potential temperature K']) \
             / height
+    height = 2.0
     result["virtual potential temperature skin change_2m K m-1"] = \
-        (result["skin potential temperature K"] - result['2m virtual potential temperature K']) / height
+        (result['2m virtual potential temperature K'] - result["skin potential temperature K"] ) / height
     result["mixing ratio skin change_2m m_g kg-1 m-1"] = \
-        (result['skin saturation mixing ratio g_kg'] - result['2m mixing ratio g_kg']) / height
-
+        result["moisture_availability:soil:None"] * (result['2m mixing ratio g_kg'] - result['skin saturation mixing ratio g_kg']) / height
+    result["kinematic_sensible_heat_flux:surface:K_m_s-1"] = kinematic_sensible_heat_flux(result["H"],
+                                                                                          result["air_density"])
+    result["kinematic_latent_heat_flux:surface:g_kg-1_m_s-1"] = kinematic_latent_heat_flux(result["LE"],
+                                                                                           result["air_density"])
     if average_period is not None:
         result = result.rolling(window=average_period).mean()
         result = result.dropna()
@@ -553,7 +562,9 @@ def process_idaho_data(csv_path, out_file, idaho_lat=43.5897, idaho_lon=-112.939
                   "potential temperature skin change_45m K m-1": "potential_temperature_skin_change:45_m:K_m-1",
                   "virtual potential temperature skin change_2m K m-1": "virtual_potential_temperature_skin_change:2_m:K_m-1",
                   "mixing ratio skin change_2m m_g kg-1 m-1": "mixing_ratio_skin_change:2_m:g_kg-1_m-1",
-                  "moisture_availability:soil:None": "moisture_availability:soil:None"
+                  "moisture_availability:soil:None": "moisture_availability:soil:None",
+                  "kinematic_sensible_heat_flux:surface:K_m_s-1": "kinematic_sensible_heat_flux:surface:K_m_s-1",
+                  "kinematic_latent_heat_flux:surface:g_kg-1_m_s-1": "kinematic_latent_heat_flux:surface:g_kg-1_m_s-1"
                   }
 
     result.rename(columns=rename_map, inplace=True)
