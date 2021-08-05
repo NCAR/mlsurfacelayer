@@ -3,7 +3,7 @@ channels:
     - conda-forge
 dependencies:
     - python=3.8
-    - numpy=1.18.*
+    - numpy
     - scipy
     - matplotlib
     - xarray
@@ -20,4 +20,4 @@ dependencies:
     - pvlib-python
     - tqdm
     - pip:
-        - tensorflow
+        - tensorflow==2.4.1
