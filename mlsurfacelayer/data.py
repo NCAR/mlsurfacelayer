@@ -424,7 +424,7 @@ def process_idaho_data(csv_path, out_file, idaho_lat=43.5897, idaho_lon=-112.939
     # Try computing Bulk Richardson Number between 2M and 5cm soil temperature
     # Compute the Bulk Richardson Number
     # Compute the virtual potential temperature
-
+    result["air_density_2m"] = air_density(result['2m virtual potential temperature K'], result["pressure hpa"])
     result['5cm Soil Temp K'] = celsius_to_kelvin(result['5cm Soil Temp C'])
     result['5cm potential temperature K'] = potential_temperature(result['5cm Soil Temp K'],
                                                                   result['pressure hpa'])
@@ -516,6 +516,7 @@ def process_idaho_data(csv_path, out_file, idaho_lat=43.5897, idaho_lon=-112.939
                   #                      "co2_flux" : "co2_flux:0_m:umol_s-1_m-2",
                   #                      "h2o_flux" : "h2o_flux:0_m:mm_s-1_m-1",
                   "air_density": "air_density:10_m:kg_m-3",
+                  "air_density_2m": "air_density:2_m:kg_m-3",
                   "air_heat_capacity": "air_heat_capacity:0_m:J_kg-1_K-1",
                   "NtRad (W/m^2)": "net_radiation:0_m:W_m-2",
                   "Solar Rad (W/m^2)": "global_horizontal_irradiance:0_m:W_m-2",
