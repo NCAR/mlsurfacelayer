@@ -90,6 +90,7 @@ def process_cabauw_data(csv_path, out_file, nan_column=("soil_water", "TH03"), c
                        "mixing ratio skin change_20 m_g kg-1 m-1",
                        "mixing ratio skin change_40 m_g kg-1 m-1",
                        "air density_10 m_kg m-3",
+                       "air density_2 m_kg m-3",
                        "wind speed_10 m_m s-1",
                        "wind direction_10 m_degrees",
                        "wind speed_20 m_m s-1",
@@ -120,6 +121,8 @@ def process_cabauw_data(csv_path, out_file, nan_column=("soil_water", "TH03"), c
                        "temperature scale_surface_K",
                        "soil heat flux_surface_W m-2",
                        "moisture scale_surface_g kg-1",
+                       "kinematic sensible heat flux_surface_K m s-1",
+                       "kinematic latent heat flux_surface_g kg-1 m s-1"
                        ]
     derived_data = pd.DataFrame(index=combined_data.index, columns=derived_columns, dtype=float)
     solar_data = get_solarposition(combined_data.index, cabauw_lat, cabauw_lon, altitude=elevation, method="nrel_numba")
@@ -228,7 +231,7 @@ def process_cabauw_data(csv_path, out_file, nan_column=("soil_water", "TH03"), c
                                                                    10,
                                                                    derived_data["mixing ratio_10 m_g kg-1"],
                                                                    derived_data[
-                                                                       "skin virtual potential temperature_0 m_K"],
+                                                                       "skin potential temperature_0 m_K"],
                                                                    derived_data["wind speed_10 m_m s-1"])
     derived_data["bulk richardson_2 m_"] = bulk_richardson_number(derived_data["potential temperature_2 m_K"],
                                                                   2,
