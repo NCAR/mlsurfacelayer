@@ -34,7 +34,7 @@ def main():
     parser.add_argument("config", help="Config yaml file")
     args = parser.parse_args()
     with open(args.config, "r") as config_file:
-        config = yaml.load(config_file)
+        config = yaml.load(config_file, Loader=yaml.Loader)
     data_file = config["data_file"]
     train_test_split_date = pd.Timestamp(config["train_test_split_date"])
     out_dir = config["out_dir"]
