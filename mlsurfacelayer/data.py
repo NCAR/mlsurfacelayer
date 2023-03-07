@@ -177,8 +177,9 @@ def process_cabauw_data(csv_path, out_file, nan_column=("soil_water", "TH03"), c
                                                                               derived_data["pressure_2 m_hPa"])
     derived_data["soil water content_3 cm_m3 m-3"] = combined_data[("soil_water", "TH03")]
     # derived_data["soil water content_8 cm_m3 m-3"] = combined_data[("soil_water", "TH08")]
+# updated field capacity value from Beljaars and Bosveld https://journals.ametsoc.org/view/journals/clim/10/6/1520-0442_1997_010_1172_cdftvo_2.0.co_2.xml
     derived_data["moisture availability_soil_"] = moisture_availability(derived_data["soil water content_3 cm_m3 m-3"],
-                                                                        field_capacity=0.82)
+                                                                        field_capacity=0.468)
     # derived_data["moisture availability_8 cm_"] = moisture_availability(derived_data["soil water content_8 cm_m3 m-3"])
     derived_data["upward longwave irradiance_0 m_W m-2"] = combined_data[("irrad", "LWU")]
     derived_data["downward longwave irradiance_0 m_W m-2"] = combined_data[("irrad", "LWD")]
