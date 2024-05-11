@@ -112,7 +112,7 @@ def process_fino_data(csv_path, out_file, nan_column=("Value_Surface_Temperature
                        "friction_velocity:40_m:m_s-1",
                        "friction_velocity:60_m:m_s-1",
                        "friction_velocity:80_m:m_s-1",
-                       "sensible_heat_flux:40_m:W_m-2", 
+                       "kinematic_sensible_heat_flux:40_m:K_m_s-1",
                        "temperature_scale:40_m:K"
                        ]
 
@@ -267,9 +267,9 @@ def process_fino_data(csv_path, out_file, nan_column=("Value_Surface_Temperature
     for height in [60,80]:                                                
         derived_data[f"friction_velocity:{height:d}_m:m_s-1"]= ((raw_data[f'u_w:{height:d}_m:m2_s-2'])**2 +  (raw_data[f'v_w:{height:d}_m:m2_s-2'])**2 )**(.25)    
 
-    derived_data["sensible_heat_flux:40_m:W_m-2"] = raw_data["Sensible Heat Flux:40_m:K_m_s-1"]
+    derived_data["kinematic_sensible_heat_flux:40_m:K_m_s-1"] = raw_data["Sensible Heat Flux:40_m:K_m_s-1"]
 
-    derived_data["temperature_scale:40_m:K"] = derived_data["sensible_heat_flux:40_m:W_m-2"]/derived_data["friction_velocity:40_m:m_s-1"]
+    derived_data["temperature_scale:40_m:K"] = derived_data["kinematic_sensible_heat_flux:40_m:K_m_s-1"]/derived_data["friction_velocity:40_m:m_s-1"]
 
     #
     # Create rolling average of data columns if requested
@@ -326,10 +326,10 @@ def load_derived_data_random_test_train(filename, dropna=True, filter_counter_gr
         dict: data divided into input, output, and derived with training and testing sets
     """
     all_data = pd.read_csv(filename, index_col="Time", parse_dates=["Time"])
-    if dropna:
-        all_data = all_data.dropna()
-    if filter_counter_gradient:
-        all_data = filter_counter_gradient_data(all_data)
+    #if dropna:
+    #     all_data = all_data.dropna()    
+    #if filter_counter_gradient:
+    #    all_data = filter_counter_gradient_data(all_data)
     data = dict()
 
     #
@@ -342,20 +342,25 @@ def load_derived_data_random_test_train(filename, dropna=True, filter_counter_gr
 
     #
     # For every month of data, choose a random week for testing and 
-    # leave the rest for trainin
+    # leave the rest for training
     #
-    
-    data["test"] = all_data.loc[(all_data.index.weekofyear.isin(randomWeeks2010)&(all_data.index.year == 2010)) |
-                                (all_data.index.weekofyear.isin(randomWeeks2006)&(all_data.index.year == 2006))  ]
+    #data["test"] = all_data.loc[(all_data.index.weekofyear.isin(randomWeeks2010)&(all_data.index.year == 2010)) |
+    #                            (all_data.index.weekofyear.isin(randomWeeks2006)&(all_data.index.year == 2006))  ]
+    #data["train"] = all_data.loc[all_data.index.difference(data["test"].index) ]
+    data["test"] = all_data.loc[(all_data.index.isocalendar().week.isin(randomWeeks2010)&(all_data.index.isocalendar().year == 2010)) |
+                                (all_data.index.isocalendar().week.isin(randomWeeks2006)&(all_data.index.isocalendar().year == 2006))  ]
     data["train"] = all_data.loc[all_data.index.difference(data["test"].index) ]
 
+
     train = pd.DataFrame()
-    train = all_data.loc[(all_data.index.weekofyear.isin(randomWeeks2010)&(all_data.index.year == 2010)) |
-                                (all_data.index.weekofyear.isin(randomWeeks2006)&(all_data.index.year == 2006))  ]
-    train.to_csv("/d1/FINO1/cubist_fino_train.csv", na_rep = '?')
+    train = all_data.loc[(all_data.index.isocalendar().week.isin(randomWeeks2010)&(all_data.index.year == 2010)) |
+                         (all_data.index.isocalendar().week.isin(randomWeeks2006)&(all_data.index.year == 2006))  ]
+    train.to_csv("/Volumes/d1/FINO1/cubist_fino_train_20220216.csv", na_rep = '?')
     test = pd.DataFrame()
     test = all_data.loc[all_data.index.difference(data["test"].index) ]
-    test.to_csv("/d1/FINO1/cubist_fino_test.csv", na_rep = '?')
+    test.to_csv("/Volumes/d1/FINO1/cubist_fino_test_20220216.csv", na_rep = '?')
+
+    print("data loaded")
     return data
 
 def filter_counter_gradient_data(data, gradient_column="potential_temperature_gradient:20_m:K_m-1",

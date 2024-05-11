@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 import numpy as np
+import math
 import yaml
 import argparse
 import pandas as pd 
-from mlsurfacelayer.data import load_derived_data
-from mlsurfacelayer.fino_data import load_derived_data_random_test_train
+#from mlsurfacelayer.data import load_derived_data
+from mlsurfacelayer.mvco_data import load_derived_data_random_test_train
 from mlsurfacelayer.models import save_random_forest_csv, save_scaler_csv
 from mlsurfacelayer.mo import * 
 from sklearn.ensemble import RandomForestRegressor
@@ -128,6 +129,7 @@ def main():
     #
     # Copy in the derived data columns from the test dataset
     #
+    print( "predictions index: ", len(model_predictions.index), " data[test].index:",  len(data["test"].index))
     model_predictions.loc[:, derived_columns] = data["test"][derived_columns]
 
     #
@@ -137,7 +139,7 @@ def main():
     #
     model_metrics = pd.DataFrame(0, index=pred_columns, columns=model_metric_types,
                                  dtype=np.float32)
-    #print(model_metrics)
+    print(model_metrics)
 
     #
     # Create the output directory for models and results if needed
@@ -155,21 +157,20 @@ def main():
     # predictors needed for the calculation
     #
     for d, date in enumerate(data["test"].index):
-        mo_out = mo_similarity_offshore(data["test"].loc[date, "bulk_richardson:40_m:none"],
-                                        data["test"].loc[date, "skin_virtual_potential_temperature:0_m:K"],
-                                        data["test"].loc[date, "water_sfc_temperature:0_m:K"],
-                                        data["test"].loc[date, "wind_speed:40_m:m_s-1"],
-                                        data["test"].loc[date, "wave_height:0_m:m"],
-                                        data["test"].loc[date, "potential_temperature:40_m:K"],
-                                        data["test"].loc[date, "wave_phase_speed:0_m:m_s-1"])
- 
-        model_predictions.loc[date, "friction_velocity40-mo"] = mo_out[0]
-        model_predictions.loc[date, "temp_scale40-mo"] = mo_out[1]
-        model_predictions.loc[date, "kin_heat_flux40-mo"] = mo_out[0]*mo_out[1] 
-        #model_predictions.loc[date, "moisture_scale-mo"] = np.nan 
-        #if d % 1000 == 0:
-        #    print(date, mo_out[0], mo_out[1])
+        mo_out = mo_similarity_offshore(data["test"].loc[date, "bulk_richardson:12_m:none"].astype(float),
+                                        data["test"].loc[date, "skin_virtual_potential_temperature:0_m:K"].astype(float),
+                                        data["test"].loc[date, "water_sfc_temperature:0_m:K"].astype(float),
+                                        data["test"].loc[date, "wind_speed:12_m:m_s-1"].astype(float),
+                                        data["test"].loc[date, "wave_height:0_m:m"].astype(float),
+                                        data["test"].loc[date, "potential_temperature:12_m:K"].astype(float),
+                                        data["test"].loc[date, "wave_phase_speed:0_m:m_s-1"].astype(float),
+                                        18.4)
+        model_predictions.loc[date, "friction_velocity-mo"] = mo_out[0]
+        model_predictions.loc[date, "temp_scale-mo"] = mo_out[1]
+        model_predictions.loc[date, "kin_heat_flux-mo"] = mo_out[0]*mo_out[1] 
 
+        #if d % 1000 == 0:
+        #    print(date, mo_out[0], model_predictions.loc[date, "friction_velocity-mo"])
     
     #
     # Compute the error in the MOST estimations of the predictands 
@@ -180,6 +181,7 @@ def main():
         # Get the predictand label used in the model_metrics dataframe
         #
         mo_predictand_label = output_type + "-" + "mo"
+        print( "label", mo_predictand_label )
 
         #
         # Compute the different error metrics for each mo estimated predictand 
@@ -187,11 +189,11 @@ def main():
         for model_metric in model_metric_types:
             #
             # Execute the metric function and for this mo index label and metric column
-            # fill in the model_metrics data frame ( 
+            # fill in the model_metrics data frame  
             #
             #model_metrics.loc[mo_predictand_label,
             #                  model_metric] = metrics[model_metric](data["test"][output_columns[output_type]].values,
-            #                                                        model_predictions[mo_predictand_label].values)
+            #                                                       model_predictions[mo_predictand_label].values)
             #
             # Output results
             #
@@ -215,6 +217,8 @@ def main():
     #
     # for each prediction problem/label or predictand
     #
+    print("mo friction vel", model_predictions['friction_velocity-mo'])
+
     for output_type in output_types:
         print("\n\n")
         print("Predictand: " ,output_columns[output_type])
@@ -295,6 +299,7 @@ def main():
                 # Run random forest on test data, fill in the model_predictions column with output
                 #
                 model_predictions.loc[:, predictandLabel_model] = model_objects[model_name][output_type].predict(data["test"][input_columns[output_type]])
+                print(" random forest prediction min", predictandLabel_model, ": ", model_predictions.loc[:, predictandLabel_model].min())
                 #
                 # Compute feature importances for neutral regime
                 #
