@@ -1,0 +1,121 @@
+data_file: "/Volumes/SuesRoo/mvco_mlsl/data/mvco_mlsl.csv"
+out_dir: "/Volumes/SuesRoo/mlsurfacelayer/data/mvco/models/"
+filter_counter_gradient: 0
+train_test_split_date: "2010-10-01"
+#output_types: ['friction_velocity', 'temp_scale', 'heat_flux']
+output_types: ['friction_velocity', 'temp_scale', 'heat_flux']
+model_metric_types: ["mean_squared_error", "mean_absolute_error", "mean_error","pearson_r2"]
+input_columns:
+  friction_velocity: [ 
+"zenith:0_m:degrees",
+"azimuth:0_m:degrees",
+#"temperature:12_m:K",
+"water_sfc_temperature:0_m:K",
+"pressure:12_m:hPa",
+#"potential_temperature:12_m:K",
+#"skin_virtual_potential_temperature:0_m:K",
+#"mixing_ratio:0_m:g_kg-1",
+"mixing_ratio:12_m:g_kg-1",
+"relative_humidity:12_m:%",
+"wave_direction:0_m:degrees",
+"wave_height:0_m:m",
+"wave_period:0_m:s",
+#"wave_phase_speed:0_m:m_s-1",
+"angle_between_wind_wave:0_m:degrees",
+"wind_speed:18.4_m:m_s-1",
+"wind_direction:18.4_m:degrees",
+"bulk_richardson:12_m:none"
+]
+  temp_scale: [
+"zenith:0_m:degrees",
+"azimuth:0_m:degrees",
+#"temperature:12_m:K",
+"water_sfc_temperature:0_m:K",
+"pressure:12_m:hPa",
+#"potential_temperature:12_m:K",
+#"skin_virtual_potential_temperature:0_m:K",
+#"mixing_ratio:0_m:g_kg-1",
+"mixing_ratio:12_m:g_kg-1",
+"relative_humidity:12_m:%",
+"wave_direction:0_m:degrees",
+"wave_height:0_m:m",
+"wave_period:0_m:s",
+#"wave_phase_speed:0_m:m_s-1",
+"angle_between_wind_wave:0_m:degrees",
+"wind_speed:18.4_m:m_s-1",
+"wind_direction:18.4_m:degrees",
+"bulk_richardson:12_m:none"
+#"sensible_heat_flux:12_m:W_m-2"
+] 
+  heat_flux: [
+"zenith:0_m:degrees",
+"azimuth:0_m:degrees",
+#"temperature:12_m:K",
+"water_sfc_temperature:0_m:K",
+"pressure:12_m:hPa",
+#"potential_temperature:12_m:K",
+#"skin_virtual_potential_temperature:0_m:K",
+#"mixing_ratio:0_m:g_kg-1",
+"mixing_ratio:12_m:g_kg-1",
+"relative_humidity:12_m:%",
+"wave_direction:0_m:degrees",
+"wave_height:0_m:m",
+"wave_period:0_m:s",
+#"wave_phase_speed:0_m:m_s-1",
+"angle_between_wind_wave:0_m:degrees",
+"wind_speed:18.4_m:m_s-1",
+"wind_direction:18.4_m:degrees",
+"bulk_richardson:12_m:none"
+#"sensible_heat_flux:12_m:W_m-2"
+]
+output_columns:
+  friction_velocity: "friction_velocity:18.4_m:m_s-1"
+  temp_scale: "temperature_scale:18.4_m:K"
+  heat_flux: "kinematic_sensible_heat_flux:18.4_m:K_m_s-1"
+  
+derived_columns: [
+"TempScaleMOST", 
+"MOSTustar",
+"L",
+'temperature:12_m:K', 
+'temperature:18.4_m:K',
+'water_sfc_temperature:0_m:K',
+'pressure:12_m:hPa', 
+'potential_temperature:12_m:K',
+'skin_virtual_potential_temperature:0_m:K', 
+'mixing_ratio:0_m:g_kg-1',
+'mixing_ratio:12_m:g_kg-1', 
+'relative_humidity:12_m:%',
+'wave_direction:0_m:degrees', 
+'wave_height:0_m:m', 
+'wave_period:0_m:s',
+'wave_phase_speed:0_m:m_s-1', 
+'near_surf_current:0_m:m_s-1',
+'near_surf_current_dir:0_m:deg', 
+'wind_speed:18.4_m:m_s-1',
+'wind_direction:18.4_m:degrees', 
+'angle_between_wind_wave:0_m:degrees',
+'u_wind:18.4_m:m_s-1',
+'v_wind:18.4_m:m_s-1', 
+'bulk_richardson:12_m:none', 
+'u_w:18.4_m:m2_s-2',
+'v_w:18.4_m:m2_s-2' 
+#'friction_velocity:18.4_m:m_s-1',
+#'kinematic_sensible_heat_flux:18.4_m:K_m_s-1',
+#'temperature_scale:18.4_m:K'
+]
+stability_column: "bulk_richardson:12_m:none"
+model_config:
+  random_forest:
+    n_estimators: 100
+    max_features: 10 
+    n_jobs: 4
+    max_leaf_nodes: 1024
+  neural_network:
+    hidden_layers: 5 
+    hidden_neurons: 64 
+    batch_size: 32
+    epochs:  10 
+    lr: 0.001
+    activation: tanh
+    l2_weight: 0.0

@@ -100,5 +100,10 @@ venv.bak/
 # mkdocs documentation
 /site
 
-# mypy
+# mypya
 .mypy_cache/
+
+#large unneeded data files (can be re-optained on casper)
+hector/qced_MVCO_ocn_sonic_vaisala_QC.20010619-20160610.outer_join.csv
+hector/west_coast/
+hector/mvco_mlsl_qc.csv

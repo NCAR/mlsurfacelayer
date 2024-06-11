@@ -1,0 +1,121 @@
+data_file: "/d1/EpriAnalysis/data5/epri.csv"
+out_dir: "/d1/EpriAnalysis/data5/round2/ModelValsOnlyAtLeadDerivs"
+output_types: ["Kt"]
+model_metric_types: ["mean_squared_error", "mean_absolute_error", "mean_error"]
+input_columns:
+  Kt: [ 
+'temp_2m [degC]',
+'relative_humidity [percent]',
+'solar_insolation [W/m^2]',
+#'snow_depth [cm]',
+'station_pressure [mbar]',
+'avg_wind_speed_sonic [m/s]',
+'wind_direction_sonic [degrees]',
+'precip_max_intensity [mm/min]',
+'precip_local [mm]',
+#'apparent_elevation',
+'elevation',
+'azimuth',
+#'TOA',
+'Kt',
+'prev15_Kt',
+'prev30_Kt',
+'prev45_Kt',
+'prev60_Kt',
+'prev75_Kt',
+'prev90_Kt',
+#'Kt_at_leadtime',
+#'TOA_at_leadtime',
+'azimuth_at_leadtime',
+'elevation_at_leadtime',
+#'apparent_elevation_at_leadtime',
+#'solar_insolation [W/m^2]_at_leadtime',
+'Q2',
+#'SWDOWN',
+#'SWDDNI',
+#'SWDDIF',
+#'TAOD5502D',
+#'CLDFRAC2D',
+#'WVP',
+#'WP_TOT_SUM',
+#'TAU_QC_TOT',
+#'RE_QC_TOT',
+#'RE_QI_TOT',
+#'TAU_QS',
+#'TAU_QI_TOT',
+##'CBASEHT_TOT',
+##'CTOPHT_TOT',
+##'SWDOWN_linear',
+#'RAINNC_derived',
+'T2_at_leadtime',
+'Q2_at_leadtime',
+'PSFC_at_leadtime',
+'U10_at_leadtime',
+'V10_at_leadtime',
+'SWDOWN_at_leadtime',
+'SWDDNI_at_leadtime',
+'SWDDIF_at_leadtime',
+'TAOD5502D_at_leadtime',
+'CLDFRAC2D_at_leadtime',
+'WVP_at_leadtime',
+'WP_TOT_SUM_at_leadtime',
+'TAU_QC_TOT_at_leadtime',
+'RE_QC_TOT_at_leadtime',
+'RE_QI_TOT_at_leadtime',
+'TAU_QS_at_leadtime',
+'TAU_QI_TOT_at_leadtime',
+#'CBASEHT_TOT_at_leadtime',
+#'CTOPHT_TOT_at_leadtime',
+'CLRNIDX_at_leadtime',
+#'SWDOWN_linear_at_leadtime',
+'RAINNC_derived_at_leadtime',
+#'deltaEl',
+#'deltaAz',
+#'deltaT',
+#'deltaP',
+#'deltaQ2',
+#'deltaSWDOWN',
+#'deltaSWDDNI',
+#'deltaSWDDIF',
+#'deltaTAOD5502D',
+#'deltaCLDFRAC2D',
+#'deltaWVP',
+#'deltaWP_TOT_SUM',
+#'deltaTAU_QC_TOT',
+#'deltaRE_QC_TOT',
+#'deltaRE_QI_TOT',
+#'deltaTAU_QS',
+#'deltaTAU_QI_TOT',
+##'deltaCTOPHT_TOT',
+##'deltaCBASEHT_TOT',
+#'deltaRAINNC_derived',
+#'DKtdt15',
+#'DKtdt30',
+#'DKtdt60'
+]
+
+output_columns:
+  Kt: 'Kt_at_leadtime'
+  
+derived_columns: [ 
+
+'TOA_at_leadtime',
+'elevation_at_leadtime',
+'solar_insolation [W/m^2]_at_leadtime',
+'CLRNIDX_at_leadtime',
+'SWDOWN_at_leadtime'
+]
+model_config:
+  random_forest:
+    n_estimators: 100
+    max_features: 12 
+    n_jobs: 4
+    max_leaf_nodes: 1024
+  neural_network:
+    hidden_layers: 4 
+    hidden_neurons: 64 
+    batch_size: 512
+    epochs: 100 
+    lr: 0.0001
+    activation: tanh
+    l2_weight: 0.0

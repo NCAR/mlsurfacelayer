@@ -371,24 +371,72 @@ def mo_similarity_two_levels(u_low, v_low, u_high, v_high, t_low, t_high, pressu
     #
     return ustar, tstar, wthv0, zeta_high, phi_m, phi_h
 
-def psi_h(z,L,Ri):
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+def psi_h_branko(z,L,Ri):
     
     if Ri < 0:
-        #return  2 * np.log( (1 + (1-z/L)**.5 )/2)
-        x = (1-16*z/L)**(-.25)
-        return  2 * np.log((1+ x**2)/2 )
+        # return  2 * np.log( (1 + (1-z/L)**.5 )/2)
+        
+        # t7 = (z/L)
+        # t6 = (1-16(t7))
+        # t5 = t6**.5 
+        # t4 = 1 + t5
+        # t3 = t4/2
+        # t2 = log(t3)
+        # t1 = (2 * t2) # should be correct according to branko but double check anyways
+        # return t1
+        return (2 * log( (1 + (1-16*(z/L))**.5 )/2)) # should be correct according to branko but double check anyways
     else:
         return -z/L
-
-def psi_m(z,L,Ri):
+    
+def psi_h_alternate(z,L,Ri):
+    
     if Ri < 0:
-        #return (2*np.log((1+(1-z/L)**.25)/2) + np.log((1+(1-z/L)**.5)/2) - (2 * np.arctan((1-z/L)**.25)) + np.pi/2)
-        x = (1-16*z/L)**(-.25)
-        return (2*np.log((1+x)/2) + np.log((1+x**2)/2) - (2 * np.arctan(x)) + np.pi/2)
+        # return  2 * np.log( (1 + (1-z/L)**.5 )/2)
+        return 2 * log( (1 + (1-16*(z/L))**.5 )/2) # should be correct according to branko but double check anyways
     else:
         return -z/L
 
-def mo_similarity_offshore(bulkRi, skinPotTemp, sfcTemp, wspd, waveHt, potTemp, wavePhaseSpd,height):
+def psi_m_branko(z,L,Ri):
+    if Ri < 0:
+        # return (2*np.log((1+(1-z/L)**.5)/2) + np.log((1+(1-z/L)**.5)/2) - (2 * np.arctan((1-z/L)**.25)) + np.pi/2)
+        return (2*log((1+(1-16*(z/L))**.25)/2) + log((1+(1-16*(z/L))**.5)/2) - (2 * atan((1-16*(z/L))**.25)) + np.pi/2) # should be correct according to branko but double check anyways
+    else:
+        return -z/L
+    
+def psi_m_alternate(z,L,Ri):
+    if Ri < 0:
+        # return (2*np.log((1+(1-z/L)**.5)/2) + np.log((1+(1-z/L)**.5)/2) - (2 * np.arctan((1-z/L)**.25)) + np.pi/2)
+        return (2*log((1+(1-16*(z/L))**.5)/2) + log((1+(1-16*(z/L))**.5)/2) - (2 * atan((1-16*(z/L))**.25)) + np.pi/2) # should be correct according to branko but double check anyways
+    else:
+        return -z/L
+    
+
+
+def mo_similarity_offshore_branko(bulkRi, skinPotTemp, sfcTemp, wspd, waveHt, potTemp, wavePhaseSpd,height):
 
     """
     Calculate flux information based on Monin-Obukhov similarity theory by solving 
@@ -416,7 +464,7 @@ def mo_similarity_offshore(bulkRi, skinPotTemp, sfcTemp, wspd, waveHt, potTemp, 
     #
     # karman
     #
-    k = .41
+    k = .4
 
     #
     # gravity
@@ -428,8 +476,8 @@ def mo_similarity_offshore(bulkRi, skinPotTemp, sfcTemp, wspd, waveHt, potTemp, 
         L = z[1]
         z0 = 3.35 * waveHt * (ustar/wavePhaseSpd)**3.4
         F = np.empty((2))
-        F[0] = skinPotTemp +  ustar/((g/sfcTemp)*k*L) *(np.log(height/z0)- psi_h(height,L,bulkRi) + psi_h(z0,L,bulkRi)) - potTemp
-        F[1] = ustar/k * (np.log(height/z0) - psi_m(height,L,bulkRi) + psi_m(z0,L,bulkRi)) - wspd
+        F[0] = skinPotTemp +  ustar/((g/sfcTemp)*k*L) *(np.log(height/z0)- psi_h_branko(height,L,bulkRi) + psi_h_branko(z0,L,bulkRi)) - potTemp
+        F[1] = ustar/k * (np.log(height/z0) - psi_m_branko(height,L,bulkRi) + psi_m_branko(z0,L,bulkRi)) - wspd
         return F
     if bulkRi < 0:
         zGuess = np.array([.1, -1.0])
@@ -446,3 +494,87 @@ def mo_similarity_offshore(bulkRi, skinPotTemp, sfcTemp, wspd, waveHt, potTemp, 
         L = z[1]
         tstar = -ustar*ustar*sfcTemp/(g*L)
     return ustar, tstar
+
+
+
+def mo_similarity_offshore_alternate(bulkRi, skinPotTemp, sfcTemp, wspd, waveHt, potTemp, wavePhaseSpd,height):
+
+    """
+    Calculate flux information based on Monin-Obukhov similarity theory by solving 
+    U(z_40 )=u_*/κ [ln⁡〖(z_40/z_0 )-ψ_m (z_40/L)+ψ_m (z_0/L)〗 ]
+    Θ(z_40 )=Θ_s-u_*/(g/T κL) [ln⁡〖(z_40/z_0 )-ψ_h (z_40/L)+ψ_h (z_0/L)〗 ]
+    for u* and L after making the following substitutions:
+    L =-(u_*^3)/(g/T u_* θ_* )=-(u_*^2)/(g/T θ_* )
+    z_0=3.35〖H_s (u_*/C_p   )〗^3.4 where C-p is wavePhase speed and z_0 is surface roughness
+     
+
+    Args:
+        bulkRi: bulk richardson number  
+        skinPotTemp : skin potential temperature in deg K
+        sfcTemp: water surface temperature in deg K 
+        wspd40: wind speed at 40m in units m/s
+        waveHt: wave height in m 
+        potTemp40: potential temperature at 40m in deg K
+        wavePhaseSpd : wave phase speed in m/s 
+
+    Returns:
+        ustar: friction velocity m/s
+        tstar: temperature scale K
+    """
+
+    #
+    # karman
+    #
+    k = .4
+
+    #
+    # gravity
+    #
+    g = 9.8
+
+    def myF(z):
+        ustar = z[0]
+        L = z[1]
+        z0 = 3.35 * waveHt * (ustar/wavePhaseSpd)**3.4
+        F = np.empty((2))
+        F[0] = skinPotTemp +  ustar/((g/sfcTemp)*k*L) *(np.log(height/z0)- psi_h_alternate(height,L,bulkRi) + psi_h_alternate(z0,L,bulkRi)) - potTemp
+        F[1] = ustar/k * (np.log(height/z0) - psi_m_alternate(height,L,bulkRi) + psi_m_alternate(z0,L,bulkRi)) - wspd
+        return F
+    if bulkRi < 0:
+        zGuess = np.array([.1, -1.0])
+    else:
+        zGuess = np.array([1, 100])
+
+    z , infodict, ier, mesg = fsolve(myF, zGuess, full_output=True)
+    #print (z, " ", ier, mesg)
+    
+    ustar = np.nan
+    tstar = np.nan        
+    if ier == 1:
+        ustar = z[0]
+        L = z[1]
+        tstar = -ustar*ustar*sfcTemp/(g*L)
+    return ustar, tstar
+
+def mo_fluxes_branko(*args):
+    #specific heat at constant pressure, cp=1003.5 J kg-1K-1
+    # ad = 1.293 # density of Pure, dry air
+    u, t = mo_similarity_offshore_branko(*args)
+    mf = -1 * u**2
+    # cp = 1003.5
+    # hf = t * cp * u * -1 * ad # original
+    # hf = t * cp * u * ad # wont need negative since i added it to u star
+    hf = t * u  # i dont think cp or ad is needed here, might be completely wrong
+
+    return mf, hf
+
+def mo_fluxes_alternate(*args):
+    #specific heat at constant pressure, cp=1003.5 J kg-1K-1
+    # ad = 1.293 # density of Pure, dry air
+    u, t = mo_similarity_offshore_alternate(*args)
+    mf = -1 * u**2
+    # cp = 1003.5
+    # hf = t * cp * u * -1 * ad
+    hf = t * u
+
+    return mf, hf

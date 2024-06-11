@@ -1,0 +1,162 @@
+#
+# Training data
+#
+data_file: "/Volumes/SuesRoo/mlsurfacelayer/FINO_WRF_2/derived/fino_derived30Min.csv"
+
+#
+# Output directory for models and stats
+# no pot temp
+#out_dir: "/Volumes/SuesRoo/mlsurfacelayer/FINO_WRF_2/models"
+# no mr
+#out_dir: "/Volumes/SuesRoo/mlsurfacelayer/FINO_WRF_2/modelsKinHeatFl40NN_noCorr2"
+out_dir: "/Volumes/SuesRoo/mlsurfacelayer/FINO_WRF_2/modelsKinSensHeatFluxRF_potTwaterSfc"
+filter_counter_gradient: 0
+
+#
+# prediction labels
+#
+#output_types: ["friction_velocity40", "kin_heat_flux40", "temp_scale40"]
+output_types: ["kin_heat_flux40"]
+#output_types: ["friction_velocity40"]
+
+#
+# prediction error metrics
+#
+model_metric_types: ["mean_squared_error", "mean_absolute_error", "mean_error"]
+
+#
+# predictor sets for each prediction label
+#
+input_columns:
+  friction_velocity40: [ 
+#"global_horizontal_irradiance:30_m:W_m-2",
+#"zenith:0_m:degrees",
+#"azimuth:0_m:degrees",
+#"angleBetweenWaveWind",
+#"temperature:40_m:K",
+"water_sfc_temperature:0_m:K",
+"pressure:40_m:hPa",
+"potential_temperature:40_m:K",
+#"skin_virtual_potential_temperature:0_m:K",
+"mixing_ratio:40_m:g_kg-1",
+"relative_humidity:40_m:%",
+"wave_dir_linear_interp:0_m:degrees",
+"wave_height:0_m:m",
+"wave_period:0_m:s",
+#"wave_phase_speed:0_m:m_s-1",
+"wind_speed:40_m:m_s-1",
+"wind_direction:40_m:degrees",
+#"bulk_richardson:40_m:none",
+"potential_temperature_gradient:20_m:K_m-1",
+"wind_speed_gradient:20_m:s-1"
+]
+
+  kin_heat_flux40: [
+"global_horizontal_irradiance:30_m:W_m-2",
+#"zenith:0_m:degrees",
+#"azimuth:0_m:degrees",
+#"angleBetweenWaveWind",
+#"temperature:40_m:K",
+"water_sfc_temperature:0_m:K",
+"pressure:40_m:hPa",
+"potential_temperature:40_m:K",
+#"skin_virtual_potential_temperature:0_m:K",
+"mixing_ratio:40_m:g_kg-1",
+"relative_humidity:40_m:%",
+"wave_dir_linear_interp:0_m:degrees",
+"wave_height:0_m:m",
+"wave_period:0_m:s",
+#"wave_phase_speed:0_m:m_s-1",
+"wind_speed:40_m:m_s-1",
+"wind_direction:40_m:degrees",
+"bulk_richardson:40_m:none",
+"potential_temperature_gradient:20_m:K_m-1",
+"wind_speed_gradient:20_m:s-1"
+]
+  temp_scale40: [
+"global_horizontal_irradiance:30_m:W_m-2",
+#"zenith:0_m:degrees",
+#"azimuth:0_m:degrees",
+#"angleBetweenWaveWind",
+#"temperature:40_m:K",
+#"water_sfc_temperature:0_m:K",
+"pressure:40_m:hPa",
+#"potential_temperature:40_m:K",
+#"skin_virtual_potential_temperature:0_m:K",
+"mixing_ratio:40_m:g_kg-1",
+"relative_humidity:40_m:%",
+"wave_dir_linear_interp:0_m:degrees",
+"wave_height:0_m:m",
+"wave_period:0_m:s",
+#"wave_phase_speed:0_m:m_s-1",
+"wind_speed:40_m:m_s-1",
+"wind_direction:40_m:degrees",
+"bulk_richardson:40_m:none",
+"potential_temperature_gradient:20_m:K_m-1",
+"wind_speed_gradient:20_m:s-1"
+]
+
+
+#
+# Predictand variable names for prediction labels
+#
+output_columns:
+  #friction_velocity40: "friction_velocity:40_m:m_s-1"
+  kin_heat_flux40: "kinematic_sensible_heat_flux:40_m:K_m_s-1" 
+  #temp_scale40 : "temperature_scale:40_m:K"
+
+#
+# Variables to be output with the predictions
+#  
+derived_columns: [ #"TempScaleMOST", 
+                  #"TempScaleMOST3",
+                  #"MOSTustar",
+                  #"MOSTustar3",
+                  #"L3",
+                  #"L",
+"global_horizontal_irradiance:30_m:W_m-2",
+#"zenith:0_m:degrees",
+#"azimuth:0_m:degrees",
+#"angleBetweenWaveWind",
+"temperature:40_m:K",
+"water_sfc_temperature:0_m:K",
+"pressure:40_m:hPa",
+"potential_temperature:40_m:K",
+"skin_virtual_potential_temperature:0_m:K",
+"mixing_ratio:40_m:g_kg-1",
+"relative_humidity:40_m:%",
+"wave_dir_linear_interp:0_m:degrees",
+"wave_height:0_m:m",
+"wave_period:0_m:s",
+"wave_phase_speed:0_m:m_s-1",
+"wind_speed:40_m:m_s-1",
+"wind_direction:40_m:degrees",
+"bulk_richardson:40_m:none",
+"potential_temperature_gradient:20_m:K_m-1",
+"wind_speed_gradient:20_m:s-1"
+]
+
+#
+# If determining predictor importance by stability regime,
+# data will be partitioned according to values of this variable
+#
+stability_column: "bulk_richardson:40_m:none"
+
+#
+# ML models and parameters
+#
+model_config:
+  random_forest:
+    n_estimators: 100
+    max_features: 10 
+#    max_features: 8 
+    n_jobs: 4
+    max_leaf_nodes: 1024
+#  neural_network:
+#    hidden_layers: 6 
+#    hidden_neurons: 64 
+#    batch_size: 512 
+#    epochs:  36 
+#    lr: 0.002
+#    activation: tanh 
+#    l2_weight: 0.0
