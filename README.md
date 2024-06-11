@@ -15,6 +15,11 @@ and the following python libraries:
 * netcdf4
 * numba
 
+#### hector / Dr. Sue Dettling additions
+* chart_studio
+* plotly
+* nbformat
+
 
 ## Installation
 Install the miniconda python distribution in your chosen directory.

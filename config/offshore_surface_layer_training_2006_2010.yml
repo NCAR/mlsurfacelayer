@@ -1,0 +1,108 @@
+#data_file: "/d1/mlsurfacelayer/data/fino/derived/fino_derived.csv"
+data_file: "/d1/mlsurfacelayer/data/fino_2006_2010/derived/fino_2006_2010_derived.csv"
+out_dir: "/d1/mlsurfacelayer/data/fino_2006_2010/models"
+filter_counter_gradient: 0
+train_test_split_date: "2010-10-01"
+output_types: ["friction_velocity40","temp_scale40"]
+model_metric_types: ["mean_squared_error", "mean_absolute_error", "mean_error"]
+input_columns:
+  friction_velocity40: [ 
+#               "global_horizontal_irradiance:30_m:W_m-2",
+               "zenith:0_m:degrees",
+               "azimuth:0_m:degrees",
+               "temperature:40_m:K",
+               "water_sfc_temperature:0_m:K",
+#               "wave_dir:0_m:degrees",
+               "wave_height:0_m:m",
+               "wave_period:0_m:s",
+               "wave_phase_speed:0_m:m_s-1",
+               "wave_u:0_m:m_s-1",
+               "wave_v:0_m:m_s-1",
+               "wind_speed:40_m:m_s-1",
+#              "wind_direction:40_m:degrees",
+               "angle_between_wind_wave:0m:degrees",
+               "relative_humidity:40_m:%",
+               "pressure:40_m:hPa",
+               "potential_temperature:40_m:K",
+               "skin_virtual_potential_temperature:0_m:K",
+               "mixing_ratio:0_m:g_kg-1",
+               "mixing_ratio:40_m:g_kg-1",
+               "u_wind:40_m:m_s-1",
+               "v_wind:40_m:m_s-1"
+               #"friction_velocity:40_m:m_s-1",
+               #"sensible_heat_flux:40_m:W_m-2",
+               #"temperature_scale:40_m:K"
+
+]
+
+  temp_scale40: [
+               "global_horizontal_irradiance:30_m:W_m-2",
+               "zenith:0_m:degrees",
+               "azimuth:0_m:degrees",
+               "temperature:40_m:K",
+               "water_sfc_temperature:0_m:K",
+#              "wave_dir:0_m:degrees",
+               "wave_height:0_m:m",
+               "wave_period:0_m:s",
+               "wave_phase_speed:0_m:m_s-1",
+               "wave_u:0_m:m_s-1",
+               "wave_v:0_m:m_s-1",
+               "wind_speed:40_m:m_s-1",
+ #              "wind_direction:40_m:degrees",
+               "angle_between_wind_wave:0m:degrees",
+               "relative_humidity:40_m:%",
+               "pressure:40_m:hPa",
+               "potential_temperature:40_m:K",
+               "skin_virtual_potential_temperature:0_m:K",
+               "mixing_ratio:0_m:g_kg-1",
+               "mixing_ratio:40_m:g_kg-1",
+               "u_wind:40_m:m_s-1",
+               "v_wind:40_m:m_s-1"
+               #"friction_velocity:40_m:m_s-1",
+               #"sensible_heat_flux:40_m:W_m-2",
+               #"temperature_scale:40_m:K"
+] 
+
+output_columns:
+  friction_velocity40: "friction_velocity:40_m:m_s-1"
+  temp_scale40: "temperature_scale:40_m:K"
+  
+derived_columns: [ "global_horizontal_irradiance:30_m:W_m-2",
+               "zenith:0_m:degrees",
+               "azimuth:0_m:degrees",
+               "temperature:40_m:K",
+               "water_sfc_temperature:0_m:K",
+               "wave_dir:0_m:degrees",
+               "wave_height:0_m:m",
+               "wave_period:0_m:s",
+               "wave_phase_speed:0_m:m_s-1",
+               "wave_u:0_m:m_s-1",
+               "wave_v:0_m:m_s-1",
+               "wind_speed:40_m:m_s-1",
+               "wind_direction:40_m:degrees",
+               "angle_between_wind_wave:0m:degrees",
+               "relative_humidity:40_m:%",
+               "pressure:40_m:hPa",
+               "potential_temperature:40_m:K",
+               "skin_virtual_potential_temperature:0_m:K",
+               "mixing_ratio:0_m:g_kg-1",
+               "mixing_ratio:40_m:g_kg-1",
+               "u_wind:40_m:m_s-1",
+               "v_wind:40_m:m_s-1",
+               "sensible_heat_flux:40_m:W_m-2" ]
+
+stability_column: "bulk_richardson:40_m:none"
+model_config:
+  random_forest:
+    n_estimators: 100
+    max_features: 10 
+    n_jobs: 4
+    max_leaf_nodes: 1024
+  neural_network:
+    hidden_layers: 3 
+    hidden_neurons: 64 
+    batch_size: 512
+    epochs: 50 
+    lr: 0.0001
+    activation: tanh
+    l2_weight: 0.0

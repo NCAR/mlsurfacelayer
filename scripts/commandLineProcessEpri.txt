@@ -1,0 +1,1 @@
+./process_epri_data.py  -i /d1/EpriAnalysis/data4/20200821_epri_training_2years/ -o /d1/EpriAnalysis/data5/epri.csv

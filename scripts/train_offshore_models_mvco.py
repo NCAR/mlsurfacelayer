@@ -5,9 +5,16 @@ import yaml
 import argparse
 import pandas as pd 
 #from mlsurfacelayer.data import load_derived_data
-from mlsurfacelayer.mvco_data import load_derived_data_random_test_train
+from mlsurfacelayer.mvco_data_QC import load_derived_data_random_test_train
 from mlsurfacelayer.models import save_random_forest_csv, save_scaler_csv
 from mlsurfacelayer.mo import * 
+
+from mlsurfacelayer.mo import mo_similarity_offshore_branko
+from mlsurfacelayer.mo import mo_similarity_offshore_alternate
+from mlsurfacelayer.mo import mo_fluxes_branko
+from mlsurfacelayer.mo import mo_fluxes_alternate
+
+
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.preprocessing import StandardScaler
 from mlsurfacelayer.models import DenseNeuralNetwork
@@ -118,7 +125,8 @@ def main():
         #
         # Predictands will also be compute using Monin Obukhov Similarity Theory
         #
-        pred_columns.append(output_type + "-" + "mo")
+        pred_columns.append(output_type + "-" + "mo_branko")
+        pred_columns.append(output_type + "-" + "mo_alternate")
 
     #
     # Initialize the model prediction data frame
@@ -156,18 +164,37 @@ def main():
     # Loop through the test data samples and call the monin obukhov code with
     # predictors needed for the calculation
     #
+    
     for d, date in enumerate(data["test"].index):
-        mo_out = mo_similarity_offshore(data["test"].loc[date, "bulk_richardson:12_m:none"].astype(float),
-                                        data["test"].loc[date, "skin_virtual_potential_temperature:0_m:K"].astype(float),
-                                        data["test"].loc[date, "water_sfc_temperature:0_m:K"].astype(float),
-                                        data["test"].loc[date, "wind_speed:12_m:m_s-1"].astype(float),
-                                        data["test"].loc[date, "wave_height:0_m:m"].astype(float),
-                                        data["test"].loc[date, "potential_temperature:12_m:K"].astype(float),
-                                        data["test"].loc[date, "wave_phase_speed:0_m:m_s-1"].astype(float),
+        if d % 1000 == 0: print(d,date)
+        # print('\n\n\n',data['test'].iloc[d-1])
+        # print('\n\n\n',data['test'].iloc[d])
+        # print('\n\n\n',data['test'].iloc[(d+1)])
+        mo_out = mo_fluxes_branko(data["test"].loc[date, "bulk_richardson:18.4_m:none"].astype(float), #mix of both qc and non-qc variables
+                                        data["test"].loc[date, "skin_virtual_potential_temperature:0_m:K"].astype(float), #qc
+                                        data["test"].loc[date, "water_sfc_temperature:0_m:K"].astype(float), #qc
+                                        data["test"].loc[date, "wind_speed:18.4_m:m_s-1"].astype(float), #non-qc
+                                        data["test"].loc[date, "wave_height:0_m:m"].astype(float), #non-qc
+                                        data["test"].loc[date, "potential_temperature:18.4_m:K"].astype(float), #qc
+                                        data["test"].loc[date, "wave_phase_speed:0_m:m_s-1"].astype(float), #non-qc
                                         18.4)
-        model_predictions.loc[date, "friction_velocity-mo"] = mo_out[0]
-        model_predictions.loc[date, "temp_scale-mo"] = mo_out[1]
-        model_predictions.loc[date, "kin_heat_flux-mo"] = mo_out[0]*mo_out[1] 
+        # print('mo_branko', mo_out)
+        model_predictions.loc[date, "momentum_flux-mo_branko"] = mo_out[0]
+        model_predictions.loc[date, "heat_flux-mo_branko"] = mo_out[1]
+        # model_predictions.loc[date, "kin_heat_flux-mo_branko"] = mo_out[0]*mo_out[1] 
+
+        mo_out = mo_fluxes_alternate(data["test"].loc[date, "bulk_richardson:18.4_m:none"].astype(float), #mix of both qc and non-qc variables
+                                        data["test"].loc[date, "skin_virtual_potential_temperature:0_m:K"].astype(float), #qc
+                                        data["test"].loc[date, "water_sfc_temperature:0_m:K"].astype(float), #qc
+                                        data["test"].loc[date, "wind_speed:18.4_m:m_s-1"].astype(float), #non-qc
+                                        data["test"].loc[date, "wave_height:0_m:m"].astype(float), #non-qc
+                                        data["test"].loc[date, "potential_temperature:18.4_m:K"].astype(float), #qc
+                                        data["test"].loc[date, "wave_phase_speed:0_m:m_s-1"].astype(float), #non-qc
+                                        18.4)
+        # print('mo_alternate', mo_out)
+        model_predictions.loc[date, "momentum_flux-mo_alternate"] = mo_out[0]
+        model_predictions.loc[date, "heat_flux-mo_alternate"] = mo_out[1]
+        # model_predictions.loc[date, "kin_heat_flux-mo_alternate"] = mo_out[0]*mo_out[1] 
 
         #if d % 1000 == 0:
         #    print(date, mo_out[0], model_predictions.loc[date, "friction_velocity-mo"])
@@ -180,25 +207,31 @@ def main():
         #
         # Get the predictand label used in the model_metrics dataframe
         #
-        mo_predictand_label = output_type + "-" + "mo"
-        print( "label", mo_predictand_label )
+        mo_predictand_label = output_type + "-" + "mo_branko"
+        mo_predictand_label2 = output_type + "-" + "mo_alternate"
+        # mo_predictand_label = output_type
+        print( "label", mo_predictand_label, mo_predictand_label2 )
 
         #
         # Compute the different error metrics for each mo estimated predictand 
         #
         for model_metric in model_metric_types:
+            # Ensure there are no NaNs in your predictions
+            valid_indices = ~np.isnan(data["test"][output_columns[output_type]].values) & ~np.isnan(model_predictions[mo_predictand_label].values)
+            valid_indices2 = ~np.isnan(data["test"][output_columns[output_type]].values) & ~np.isnan(model_predictions[mo_predictand_label2].values)
+
             #
             # Execute the metric function and for this mo index label and metric column
             # fill in the model_metrics data frame  
             #
-            #model_metrics.loc[mo_predictand_label,
-            #                  model_metric] = metrics[model_metric](data["test"][output_columns[output_type]].values,
-            #                                                       model_predictions[mo_predictand_label].values)
+            model_metrics.loc[mo_predictand_label,model_metric] = metrics[model_metric](data["test"][output_columns[output_type]].values[valid_indices], model_predictions[mo_predictand_label].values[valid_indices])
+            model_metrics.loc[mo_predictand_label2,model_metric] = metrics[model_metric](data["test"][output_columns[output_type]].values[valid_indices2], model_predictions[mo_predictand_label2].values[valid_indices2])
             #
             # Output results
             #
             print(f"{mo_predictand_label:30s} {model_metric:20s}: {model_metrics.loc[mo_predictand_label, model_metric]:.15f}")
-
+            print(f"{mo_predictand_label2:30s} {model_metric:20s}: {model_metrics.loc[mo_predictand_label2, model_metric]:.15f}")
+    
     #
     # Create models 
     #
@@ -217,7 +250,14 @@ def main():
     #
     # for each prediction problem/label or predictand
     #
-    print("mo friction vel", model_predictions['friction_velocity-mo'])
+    # print("mo_branko friction vel", model_predictions['friction_velocity-mo_branko'])
+    # print("mo_alternate friction vel", model_predictions['friction_velocity-mo_alternate'])
+    print(model_predictions.columns)
+    print("mo_branko momentum flux ",model_predictions['momentum_flux-mo_branko'])
+    print("mo_alternate momentum flux ",model_predictions['momentum_flux-mo_alternate'])
+
+    print("mo_branko heat flux ",model_predictions['heat_flux-mo_branko'])
+    print("mo_alternate heat flux ",model_predictions['heat_flux-mo_alternate'])
 
     for output_type in output_types:
         print("\n\n")
@@ -244,6 +284,7 @@ def main():
         #
         var_scale_list = input_columns[output_type] + [output_columns[output_type]]
 
+        print(var_scale_list)
         scaled_train  = input_scalers[output_type].fit_transform( data["train"][var_scale_list])
        
         #
@@ -281,7 +322,8 @@ def main():
             # Train the neural net on the normalized data
             #
             else:
-                model_objects[model_name][output_type].fit(scaled_train[:,0:-1], scaled_train[:,-1])
+                history = model_objects[model_name][output_type].fit(scaled_train[:,0:-1], scaled_train[:,-1])
+                # print(history, history.history)
             
             print("\nPredicting", output_type, model_name)
             
@@ -410,13 +452,31 @@ def main():
                 importances[output_type][model_name].to_csv(join(out_dir,
                                                                  output_type + "_" + model_name + "_importances.csv"),
                                                             index_label="input")
+            
+            
+            # Unscale the Neural Networks predictions before calculating the metrics
+            if model_name == "neural_network":
+                # print('---------------- testing here ----------------\n')
+                # print("\nmodel_predictions[predictandLabel_model].values\n", model_predictions[predictandLabel_model].values)
+                # print("\ndata['test'][output_columns[output_type]].values\n", data["test"][output_columns[output_type]].values)
+                # # print("scaled_test[:,0:-1]\n", scaled_test[:,0:-1])
+                # print("scaled_test[:,0:-1]\n", scaled_test[:,-1:])
+                # print("\ninput_scalers[output_type].scale_[len(input_scalers[output_type].scale_) - 1 ]\n", input_scalers[output_type].scale_[len(input_scalers[output_type]formatscale_) - 1 ])
+                # print("\ninput_scalers[output_type].mean_[len(input_scalers[output_type].mean_) - 1 ]\n", input_scalers[output_type].mean_[len(input_scalers[output_type].mean_) - 1 ])
+
+                
+                model_predictions[predictandLabel_model] = model_predictions[predictandLabel_model]  * input_scalers[output_type].scale_[len(input_scalers[output_type].scale_) - 1 ] + input_scalers[output_type].mean_[len(input_scalers[output_type].mean_) - 1 ]
+                
+
+                # print("model_predictions[predictandLabel_model].values\n", model_predictions[predictandLabel_model].values)
+                # break
+            
+
             #
             # Compute error metrics
             #
             for model_metric in model_metric_types:
-                model_metrics.loc[predictandLabel_model, model_metric] = metrics[
-                    model_metric](data["test"][output_columns[output_type]].values,
-                                  model_predictions[predictandLabel_model].values)
+                model_metrics.loc[predictandLabel_model, model_metric] = metrics[model_metric](data["test"][output_columns[output_type]].values, model_predictions[predictandLabel_model].values)
                 #
                 # Output error metrics for user
                 #
@@ -449,6 +509,14 @@ def main():
                 #
                 #
                 model_objects[model_name][output_type].save_fortran_model(join(out_dir, predictandLabel_model + "_fortran.nc"))
+            #
+            # Save ML models history (loss and training data)
+            #
+            if model_name == "neural_network":
+                # Convert the history to a DataFrame and save it to a CSV file
+                history_df = pd.DataFrame(history.history)
+                history_df.to_csv(join(out_dir, predictandLabel_model + "_training_history.csv"), index=False)
+                
 
         #
         # Saved the parameters for scaling the data for neural network as csv and pickle files

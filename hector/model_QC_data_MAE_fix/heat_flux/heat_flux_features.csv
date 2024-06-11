@@ -1,0 +1,14 @@
+Index,feature
+0,zenith:0_m:degrees
+1,azimuth:0_m:degrees
+2,water_sfc_temperature:0_m:K
+3,pressure:18.4_m:hPa
+4,mixing_ratio:18.4_m:g_kg-1
+5,relative_humidity:18.4_m:%
+6,wave_direction:0_m:degrees
+7,wave_height:0_m:m
+8,wave_period:0_m:s
+9,angle_between_wind_wave:0_m:degrees
+10,wind_speed:18.4_m:m_s-1
+11,wind_direction:18.4_m:degrees
+12,bulk_richardson:18.4_m:none
