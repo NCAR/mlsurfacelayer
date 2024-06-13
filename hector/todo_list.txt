@@ -18,3 +18,44 @@ question for tim
     what is a good guess? or an array of guesses
     should we only use 1 guess or can we use guess number 2 if the first guess fails to converge
     
+
+
+idea dump
+
+    how to split our data?
+        do embargo?
+        cross validation 
+        
+    west coast data
+        fino data
+
+
+    
+        
+
+
+    start putting together a powerpoint for next thursday
+
+    have a branko slide 
+        ask him to look over our inputs and see which r important or not
+
+        how would our models interact with WRF(weather research forecast)?
+        we are nowcasting, is the WRF nowcasting as well?
+                           is the WRF forecasting?
+        can i use previous flux readings to nowcast/predict current flux? 
+            i want to know what exactly goes into the WRF model and what is available to it input wise
+            (at least if it has access to previous measurements in time)
+
+    range of first guesses for u star and obukhov lentgh
+
+    use mccandless paper hyperparameters
+    do extensive hyperparameter search
+
+    restrict inputs, how little can we get away with
+        branko inputs interest: 
+            angle between wind and waves : wave dir and wind dir
+        wave heigt?
+
+    heat map
+
+    forward addition backwards elimination
