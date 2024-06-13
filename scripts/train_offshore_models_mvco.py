@@ -6,6 +6,7 @@ import argparse
 import pandas as pd 
 #from mlsurfacelayer.data import load_derived_data
 from mlsurfacelayer.mvco_data_QC import load_derived_data_random_test_train
+from mlsurfacelayer.mvco_data_QC import load_derived_data_random_test_train_val
 from mlsurfacelayer.models import save_random_forest_csv, save_scaler_csv
 from mlsurfacelayer.mo import * 
 
@@ -45,6 +46,8 @@ def main():
     with open(args.config, "r") as config_file:
         config = yaml.load(config_file,Loader=yaml.FullLoader)
 
+    
+
     #
     # Training data
     #
@@ -54,7 +57,7 @@ def main():
     # Output directory for ML models and performance statistics
     #
     out_dir = config["out_dir"]
- 
+
     #
     # The prediction labels
     #
@@ -106,7 +109,16 @@ def main():
     # Test and train data loaded.
     # Testing data specified by randomly chosen week within each month of data
     #
-    data = load_derived_data_random_test_train(data_file, dropna=True, filter_counter_gradient=filter_counter_gradient)
+    # data = load_derived_data_random_test_train_val(data_file, dropna=True, filter_counter_gradient=filter_counter_gradient)
+    data = load_derived_data_random_test_train_val(data_file, dropna=True, 
+                                                    filter_counter_gradient=filter_counter_gradient,
+                                                    devVar=config['k_fold_cross_validation']['devVar'],
+                                                    N=config['k_fold_cross_validation']['N'],
+                                                    k=config['k_fold_cross_validation']['k'])
+
+    # tempdf = data['test']
+    # data['test'] = data['validate']
+    # data['validate'] = tempdf
 
     model_objects = dict()
 
@@ -154,6 +166,13 @@ def main():
     #
     if not exists(out_dir):
         makedirs(out_dir)
+
+    # Save to a YAML file
+    with open(out_dir + '/config_info.yml', 'w') as file:
+        # print(config)
+        # print(out_dir)
+        # print(file)
+        yaml.dump(config, file) 
 
     #
     # Calculate the predictands using MOST
@@ -286,7 +305,9 @@ def main():
 
         print(var_scale_list)
         scaled_train  = input_scalers[output_type].fit_transform( data["train"][var_scale_list])
-       
+        scaled_val  = input_scalers[output_type].transform( data["validate"][var_scale_list])
+        
+
         #
         # Scale the test data predictors
         #
@@ -311,7 +332,7 @@ def main():
             print("The predictors ", input_columns[output_type])
             print("Training data shape: ",data["train"][input_columns[output_type]].shape)
 
-  
+
             #
             # Train the random forest on non-normalized data
             #
@@ -322,7 +343,7 @@ def main():
             # Train the neural net on the normalized data
             #
             else:
-                history = model_objects[model_name][output_type].fit(scaled_train[:,0:-1], scaled_train[:,-1])
+                history = model_objects[model_name][output_type].fit(scaled_train[:,0:-1], scaled_train[:,-1], scaled_val[:,0:-1], scaled_val[:,-1])
                 # print(history, history.history)
             
             print("\nPredicting", output_type, model_name)
@@ -464,6 +485,13 @@ def main():
                 # print("\ninput_scalers[output_type].scale_[len(input_scalers[output_type].scale_) - 1 ]\n", input_scalers[output_type].scale_[len(input_scalers[output_type]formatscale_) - 1 ])
                 # print("\ninput_scalers[output_type].mean_[len(input_scalers[output_type].mean_) - 1 ]\n", input_scalers[output_type].mean_[len(input_scalers[output_type].mean_) - 1 ])
 
+                scaled_test = pd.DataFrame()
+                # for model_metric in model_metric_types:
+                #     scaled_test[predictandLabel_model, model_metric] = metrics[model_metric](data["test"][output_columns[output_type]].values, model_predictions[predictandLabel_model].values)
+                for model_metric in model_metric_types:
+                    scaled_test.loc[:, (predictandLabel_model, model_metric)] = metrics[model_metric](data["test"][output_columns[output_type]].values, model_predictions[predictandLabel_model].values)
+                
+                scaled_test.to_csv(join(out_dir, predictandLabel_model + "_scaled_metrics_NN.csv"), index=False)
                 
                 model_predictions[predictandLabel_model] = model_predictions[predictandLabel_model]  * input_scalers[output_type].scale_[len(input_scalers[output_type].scale_) - 1 ] + input_scalers[output_type].mean_[len(input_scalers[output_type].mean_) - 1 ]
                 

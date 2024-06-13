@@ -1,8 +1,9 @@
 #
 #
 #
+file_name: "offshore_surface_layer_training_mvco"
 data_file: "../hector/mvco_mlsl_qc.csv"
-out_dir: "../hector/model_QC_data_50_epochs"
+out_dir: "../hector/model_QC_"
 filter_counter_gradient: 0
 train_test_split_date: "2010-10-01"
 #output_types: ['friction_velocity', 'temp_scale', 'heat_flux']
@@ -104,6 +105,12 @@ derived_columns: [
 ]
 # stability_column: "bulk_richardson:12_m:none"
 stability_column: "bulk_richardson:18.4_m:none"
+
+k_fold_cross_validation:
+  devVar: 'kfold'
+  N: 10
+  k: 0
+
 model_config:
   random_forest:
     n_estimators: 100
@@ -111,10 +118,13 @@ model_config:
     n_jobs: 4
     max_leaf_nodes: 1024
   neural_network:
-    hidden_layers: 5 
+    # hidden_layers: 5 
+    hidden_layers: 1 
     hidden_neurons: 64 
     batch_size: 32
-    epochs:  50 
+    epochs:  1000
     lr: 0.001
     activation: tanh
     l2_weight: 0.0
+    min_delta: 0
+    patience: 50
