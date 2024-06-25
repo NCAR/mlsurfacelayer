@@ -395,22 +395,37 @@ def mo_similarity_two_levels(u_low, v_low, u_high, v_high, t_low, t_high, pressu
 
 
 
-def psi_h_branko(z,L,Ri):
+# def psi_h_branko(z,L,Ri):
     
-    if Ri < 0:
-        # return  2 * np.log( (1 + (1-z/L)**.5 )/2)
+#     if Ri < 0:
+#         # return  2 * np.log( (1 + (1-z/L)**.5 )/2)
         
-        # t7 = (z/L)
-        # t6 = (1-16(t7))
-        # t5 = t6**.5 
-        # t4 = 1 + t5
-        # t3 = t4/2
-        # t2 = log(t3)
-        # t1 = (2 * t2) # should be correct according to branko but double check anyways
-        # return t1
-        return (2 * log( (1 + (1-16*(z/L))**.5 )/2)) # should be correct according to branko but double check anyways
+#         # t7 = (z/L)
+#         # t6 = (1-16(t7))
+#         # t5 = t6**.5 
+#         # t4 = 1 + t5
+#         # t3 = t4/2
+#         # t2 = log(t3)
+#         # t1 = (2 * t2) # should be correct according to branko but double check anyways
+#         # return t1
+        # return (2 * log( (1 + (1-16*(z/L))**.5 )/2)) # should be correct according to branko but double check anyways
+#     else:
+#        return -z/L
+def psi_h_branko(z, L, Ri, verbose=0):
+    verbose = 0
+    if Ri < 0:
+        if verbose >= 2:
+            print(f"Calculating psi_h_alternate for z={z}, L={L}, Ri={Ri}")
+        # return  2 * np.log( (1 + (1-z/L)**.5 )/2)
+        result = 2 * np.log((1 + (1 - 16 * (z / L))**0.5) / 2) # should be correct according to branko but double check anyways
+        if verbose >= 2:
+            print(f"psi_h_alternate result: {result}")
+        return result
     else:
-        return -z/L
+        result = -z / L
+        if verbose >= 2:
+            print(f"psi_h_alternate result: {result}")
+        return result
     
 def psi_h_alternate(z,L,Ri):
     
@@ -420,12 +435,30 @@ def psi_h_alternate(z,L,Ri):
     else:
         return -z/L
 
-def psi_m_branko(z,L,Ri):
+# def psi_m_branko(z,L,Ri):
+#     if Ri < 0:
+#         # return (2*np.log((1+(1-z/L)**.5)/2) + np.log((1+(1-z/L)**.5)/2) - (2 * np.arctan((1-z/L)**.25)) + np.pi/2)
+#         return (2*log((1+(1-16*(z/L))**.25)/2) + log((1+(1-16*(z/L))**.5)/2) - (2 * atan((1-16*(z/L))**.25)) + np.pi/2) # should be correct according to branko but double check anyways
+#     else:
+#         return -z/L
+def psi_m_branko(z, L, Ri, verbose=0):
+    verbose = 0
     if Ri < 0:
+        if verbose >= 2:
+            print(f"Calculating psi_m_branko for z={z}, L={L}, Ri={Ri}")
         # return (2*np.log((1+(1-z/L)**.5)/2) + np.log((1+(1-z/L)**.5)/2) - (2 * np.arctan((1-z/L)**.25)) + np.pi/2)
-        return (2*log((1+(1-16*(z/L))**.25)/2) + log((1+(1-16*(z/L))**.5)/2) - (2 * atan((1-16*(z/L))**.25)) + np.pi/2) # should be correct according to branko but double check anyways
+        result = (2 * np.log((1 + (1 - 16 * (z / L))**0.25) / 2) + 
+                  np.log((1 + (1 - 16 * (z / L))**0.5) / 2) - 
+                  (2 * np.arctan((1 - 16 * (z / L))**0.25)) + 
+                  np.pi / 2) # should be correct according to branko but double check anyways
+        if verbose >= 2:
+            print(f"psi_m_branko result: {result}")
+        return result
     else:
-        return -z/L
+        result = -z / L
+        if verbose >= 2:
+            print(f"psi_m_branko result: {result}")
+        return result
     
 def psi_m_alternate(z,L,Ri):
     if Ri < 0:
@@ -543,7 +576,7 @@ def mo_similarity_offshore_alternate(bulkRi, skinPotTemp, sfcTemp, wspd, waveHt,
     if bulkRi < 0:
         zGuess = np.array([.1, -1.0])
     else:
-        zGuess = np.array([1, 100])
+        zGuess = np.array([0.05, 100])
 
     z , infodict, ier, mesg = fsolve(myF, zGuess, full_output=True)
     #print (z, " ", ier, mesg)
@@ -558,12 +591,12 @@ def mo_similarity_offshore_alternate(bulkRi, skinPotTemp, sfcTemp, wspd, waveHt,
 
 def mo_fluxes_branko(*args):
     #specific heat at constant pressure, cp=1003.5 J kg-1K-1
-    # ad = 1.293 # density of Pure, dry air
+    #rho = 1.293 # density of Pure, dry air
     u, t = mo_similarity_offshore_branko(*args)
-    mf = -1 * u**2
+    mf = u**2
     # cp = 1003.5
     # hf = t * cp * u * -1 * ad # original
-    # hf = t * cp * u * ad # wont need negative since i added it to u star
+    # hf = t * cp * u * rho # wont need negative since i added it to u star
     hf = t * u  # i dont think cp or ad is needed here, might be completely wrong
 
     return mf, hf
@@ -572,7 +605,7 @@ def mo_fluxes_alternate(*args):
     #specific heat at constant pressure, cp=1003.5 J kg-1K-1
     # ad = 1.293 # density of Pure, dry air
     u, t = mo_similarity_offshore_alternate(*args)
-    mf = -1 * u**2
+    mf =  u**2
     # cp = 1003.5
     # hf = t * cp * u * -1 * ad
     hf = t * u

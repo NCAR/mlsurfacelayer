@@ -98,10 +98,16 @@ derived_columns: [
 # 'bulk_richardson:12_m:none', 
 'bulk_richardson:18.4_m:none', 
 'u_w:18.4_m:m2_s-2',
-'v_w:18.4_m:m2_s-2' 
+'v_w:18.4_m:m2_s-2',
 #'friction_velocity:18.4_m:m_s-1',
 #'kinematic_sensible_heat_flux:18.4_m:K_m_s-1',
 #'temperature_scale:18.4_m:K'
+
+# added derivative below
+"dt/dz",
+"Speed/z",
+"du/dz", # 'U/z' 
+"dv/dz" # 'V/z' 
 ]
 # stability_column: "bulk_richardson:12_m:none"
 stability_column: "bulk_richardson:18.4_m:none"
