@@ -4,6 +4,7 @@ from os.path import join
 from .derived import *
 from pvlib.solarposition import get_solarposition
 import datetime
+from sklearn.utils import shuffle
 
 '''
 This file will process the QC dataset, so that the inputs to the ML model are part non-QC and part QC variables.
@@ -129,14 +130,14 @@ def process_mvco_data(csv_path, out_file, nan_column="", mvco_lon=-70.544, mvco_
     derived_columns = ["zenith:0_m:degrees",
                        "azimuth:0_m:degrees",
                        "temperature:12_m:K",
-                       "temperature_med:12_m:K",
-                       "temperature_std:12_m:K",
+                    #    "temperature_med:12_m:K",
+                    #    "temperature_std:12_m:K",
                        "temperature:18.4_m:K",
-                       "temperature2:18.4_m:K",
+                    #    "temperature2:18.4_m:K", # second sensor, only have data from 2020+, dont have wave data during those years so is currently unusable - hector Jun 2024
                        "water_sfc_temperature:0_m:K",
                        "pressure:12_m:hPa",
-                       "pressure_med:12_m:hPa",
-                       "pressure_std:12_m:hPa",
+                    #    "pressure_med:12_m:hPa",
+                    #    "pressure_std:12_m:hPa",
                        "potential_temperature:12_m:K",
                        "skin_virtual_potential_temperature:0_m:K",
                        "mixing_ratio:0_m:g_kg-1",
@@ -177,7 +178,11 @@ def process_mvco_data(csv_path, out_file, nan_column="", mvco_lon=-70.544, mvco_
                        "pressure:18.4_m:hPa",
                        "relative_humidity:18.4_m:%",
                        "potential_temperature:18.4_m:K",
-                       "mixing_ratio:18.4_m:g_kg-1"
+                       "mixing_ratio:18.4_m:g_kg-1",
+                       "dt/dz",
+                       "Speed/z",
+                       "du/dz", # 'U/z' 
+                       "dv/dz" # 'V/z' since we assume a linear slope at low elevation. we perform : changeInVariable/changInHeight = [ (Var(z1) - Var(z2)) / (z1-z2) ]
                        ]
 
     print( "Calculating derived variables")
@@ -187,7 +192,7 @@ def process_mvco_data(csv_path, out_file, nan_column="", mvco_lon=-70.544, mvco_
     #
     if verbose == 2: print("Define the derived_data dataframe: done")
     derived_data = pd.DataFrame(index=raw_data.index, columns=derived_columns, dtype=float)
-    
+
 
     #
     # Fill in solar angles
@@ -250,6 +255,15 @@ def process_mvco_data(csv_path, out_file, nan_column="", mvco_lon=-70.544, mvco_
     # Calculate wind speed using Pythagorean theorem
     # -hector
     derived_data["wind_speed:18.4_m:m_s-1"] = np.sqrt(derived_data['u_wind:18.4_m:m_s-1']**2 + derived_data['v_wind:18.4_m:m_s-1']**2)
+
+
+    # derived_data["dt/dz"] = (derived_data["Var(z1)"] - derived_data["Var(z2)"]) / (z1 - z2)
+    # z2 is assumed to be 0 : height at surface of water is 0
+    z1 = 18.4
+    derived_data["dt_dz"]  = (derived_data["temperature:18.4_m:K"] - derived_data["water_sfc_temperature:0_m:K"]) / z1
+    derived_data["dSpeed_dz"]= derived_data["wind_speed:18.4_m:m_s-1"] / z1
+    derived_data["du_dz"]  = derived_data["u_wind:18.4_m:m_s-1"] / z1
+    derived_data["dv_dz"]  = derived_data["v_wind:18.4_m:m_s-1"] / z1
 
 
     derived_data["angle_between_wind_wave:0_m:degrees"] = 180/np.pi * np.arccos((derived_data["u_wave:0_m:m_s-1"] * derived_data["u_wind:18.4_m:m_s-1"] + derived_data["v_wave:0_m:m_s-1"] * derived_data["v_wind:18.4_m:m_s-1"])/(derived_data["wave_phase_speed:0_m:m_s-1"] * derived_data["wind_speed:18.4_m:m_s-1"]))
@@ -339,6 +353,9 @@ def process_mvco_data(csv_path, out_file, nan_column="", mvco_lon=-70.544, mvco_
     # Note: 18.4 [m] * 9.81 [m/s^2] * 1.293 [kg/m^3] = 233.391672  Pa
     if verbose == 2: print("Sea Surface/ Skin mixing ratio") 
     # sea_surface_pressure = derived_data["pressure:12_m:hPa"] + 152.21196/100
+
+    '''there is a bug here with the mixing ratio - hector'''
+
     sea_surface_pressure = derived_data["pressure:18.4_m:hPa"] + 233.391672/100 # we are using this one bc we r swapping from 12m to 18.4m
     # derived_data["mixing_ratio:0_m:g_kg-1"] = mixing_ratio(raw_data["water_temp:0_m:C"], 100,  sea_surface_pressure)
     derived_data["mixing_ratio:0_m:g_kg-1"] = mixing_ratio(raw_data["SST_QC"], 100,  sea_surface_pressure) # edited by hector
@@ -569,7 +586,7 @@ def merge_dataframes(df_list):
     test_df = df_list[-1] # The last DataFrame will be the test set
     return train_df, val_df, test_df
 
-def load_derived_data_random_test_train_val(filename, dropna=False, filter_counter_gradient=False, devVar=None, N=10, k=0):
+def load_derived_data_random_test_train_val(filename, dropna=False, filter_counter_gradient=False, devVar=None, N=10, k=0, scramble=False):
     """
     Load derived data file, remove NaN events, and split the data into training and test sets.
 
@@ -634,6 +651,9 @@ def load_derived_data_random_test_train_val(filename, dropna=False, filter_count
     # data["train"] = all_data.loc[all_data.index.difference(c)]
     data["train"] = all_data.loc[all_data.index.difference(pd.concat([pd.Series(data["test"].index), 
                                                                         pd.Series(data["validate"].index)]))]
+
+    if scramble == True:
+        all_data = shuffle(all_data, random_state=42)
 
     if devVar == "kfold":
         df_list = split_dataframe(all_data, N)              # into N smaller DataFrames

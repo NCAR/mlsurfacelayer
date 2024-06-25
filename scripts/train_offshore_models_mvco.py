@@ -239,6 +239,10 @@ def main():
             valid_indices = ~np.isnan(data["test"][output_columns[output_type]].values) & ~np.isnan(model_predictions[mo_predictand_label].values)
             valid_indices2 = ~np.isnan(data["test"][output_columns[output_type]].values) & ~np.isnan(model_predictions[mo_predictand_label2].values)
 
+            print('length of most comps valid cases (success converging)')
+            print(len(valid_indices))
+            print(len(valid_indices2))
+
             #
             # Execute the metric function and for this mo index label and metric column
             # fill in the model_metrics data frame  
@@ -490,7 +494,8 @@ def main():
                 #     scaled_test[predictandLabel_model, model_metric] = metrics[model_metric](data["test"][output_columns[output_type]].values, model_predictions[predictandLabel_model].values)
                 for model_metric in model_metric_types:
                     scaled_test.loc[:, (predictandLabel_model, model_metric)] = metrics[model_metric](data["test"][output_columns[output_type]].values, model_predictions[predictandLabel_model].values)
-                
+                    model_metrics.loc[predictandLabel_model, model_metric] = metrics[model_metric](data["test"][output_columns[output_type]].values, model_predictions[predictandLabel_model].values)
+                    
                 scaled_test.to_csv(join(out_dir, predictandLabel_model + "_scaled_metrics_NN.csv"), index=False)
                 
                 model_predictions[predictandLabel_model] = model_predictions[predictandLabel_model]  * input_scalers[output_type].scale_[len(input_scalers[output_type].scale_) - 1 ] + input_scalers[output_type].mean_[len(input_scalers[output_type].mean_) - 1 ]
