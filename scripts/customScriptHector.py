@@ -21,7 +21,7 @@ def create_kfold_yamls():
     for i in range(folds):
         config['k_fold_cross_validation']['k'] = i
         config['file_name'] = name + '--kfold-' + str(i)
-        config['out_dir'] = out_dir + '--kfold-' + str(i)
+        config['out_dir'] = out_dir + 'model_QC_' + '--kfold-' + str(i)
 
         # Save to a YAML file
         with open(prefix + config['file_name'] + '.yml', 'w') as file:
@@ -29,7 +29,8 @@ def create_kfold_yamls():
 
 
 if __name__ == '__main__':
-    # create_kfold_yamls()
-    for i in range(1,10):
-        os.system("python train_offshore_models_mvco.py '../config/offshore_surface_layer_training_mvco/offshore_surface_layer_training_mvco--kfold-{0}.yml'".format(i))
+    create_kfold_yamls()
+    # for i in range(10):
+        # os.system("python train_offshore_models_mvco.py '../config/offshore_surface_layer_training_mvco/offshore_surface_layer_training_mvco--kfold-{0}.yml'".format(i))
+        # os.system("python train_offshore_models_mvco.py '../config/offshore_surface_layer_training_mvco_scramble/offshore_surface_layer_training_mvco_scramble--kfold-{0}.yml'".format(i))
     
