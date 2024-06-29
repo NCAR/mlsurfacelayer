@@ -413,6 +413,7 @@ def mo_similarity_two_levels(u_low, v_low, u_high, v_high, t_low, t_high, pressu
 #        return -z/L
 def psi_h_branko(z, L, Ri, verbose=0):
     verbose = 0
+    # try:
     if Ri < 0:
         if verbose >= 2:
             print(f"Calculating psi_h_alternate for z={z}, L={L}, Ri={Ri}")
@@ -426,7 +427,12 @@ def psi_h_branko(z, L, Ri, verbose=0):
         if verbose >= 2:
             print(f"psi_h_alternate result: {result}")
         return result
-    
+    # except Exception as e:
+    #     print('error encountered')
+    #     return result, e
+    # else:
+    #     return result
+
 def psi_h_alternate(z,L,Ri):
     
     if Ri < 0:
@@ -443,6 +449,7 @@ def psi_h_alternate(z,L,Ri):
 #         return -z/L
 def psi_m_branko(z, L, Ri, verbose=0):
     verbose = 0
+    # try:
     if Ri < 0:
         if verbose >= 2:
             print(f"Calculating psi_m_branko for z={z}, L={L}, Ri={Ri}")
@@ -459,6 +466,11 @@ def psi_m_branko(z, L, Ri, verbose=0):
         if verbose >= 2:
             print(f"psi_m_branko result: {result}")
         return result
+    # except Exception as e:
+    #     print('error found')
+    #     return result, e
+    # else:
+    #     return result
     
 def psi_m_alternate(z,L,Ri):
     if Ri < 0:

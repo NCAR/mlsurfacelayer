@@ -29,7 +29,7 @@ def create_kfold_yamls():
 
 
 if __name__ == '__main__':
-    # create_kfold_yamls()
-    for i in range(1,10):
-        os.system("python train_offshore_models_mvco.py '../config/offshore_surface_layer_training_mvco/offshore_surface_layer_training_mvco--kfold-{0}.yml'".format(i))
+    create_kfold_yamls()
+    #for i in range(10):
+    #    os.system("python train_offshore_models_mvco.py '../config/offshore_surface_layer_training_mvco/offshore_surface_layer_training_mvco--kfold-{0}.yml'".format(i))
     
