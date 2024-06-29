@@ -5,13 +5,14 @@ from os.path import exists, join
 from tensorflow.keras.layers import Input, Dense, Dropout, GaussianNoise
 from tensorflow.keras.models import Model
 from tensorflow.keras.regularizers import l2
-from tensorflow.keras.optimizers import SGD
+# from tensorflow.keras.optimizers import SGD
 from tensorflow.keras.callbacks import EarlyStopping
 # from tensorflow.keras.optimizers import Adam, SGD
 import xarray as xr
 
 # hector code
 from tensorflow.keras.optimizers.legacy import Adam 
+from tensorflow.keras.optimizers.legacy import SGD
 
 
 class DenseNeuralNetwork(object):
@@ -93,9 +94,16 @@ class DenseNeuralNetwork(object):
             self.optimizer_obj = Adam(lr=self.lr, beta_1=self.adam_beta_1, beta_2=self.adam_beta_2, decay=self.decay)
         elif self.optimizer == "sgd":
             self.optimizer_obj = SGD(lr=self.lr, momentum=self.sgd_momentum, decay=self.decay)
-        self.model.compile(optimizer=self.optimizer, loss=self.loss)
+        self.model.compile(optimizer=self.optimizer_obj, loss=self.loss)
+
+        # Attach the custom fit method to the model
+        self.model.original_fit = self.model.fit
+        self.model.fit = self.fit.__get__(self.model)
+
+        return self.model
 
     def fit(self, x, y, x_val, y_val):
+        if self.verbose >= 2: print("\n\n\nCalling DenseNeuralNetwork.fit() method\n\n")
         earlyStop = EarlyStopping(
                         monitor='val_loss',
                         min_delta=self.min_delta,
@@ -127,14 +135,14 @@ class DenseNeuralNetwork(object):
                 y_val_class[y_val == label, l] = 1
             
 
-            history = self.model.fit(x, y_class, 
+            history = self.model.original_fit(x, y_class, 
                                      validation_data=(x_val, y_val_class), # this should work, has not been tested/confirmed that its working
                                      batch_size=self.batch_size, 
                                      epochs=self.epochs, 
                                      verbose=self.verbose,
                                      callbacks=[earlyStop])
         else:
-            history = self.model.fit(x, y, 
+            history = self.model.original_fit(x, y, 
                                      validation_data=(x_val, y_val),
                                      batch_size=self.batch_size, 
                                      epochs=self.epochs, 
@@ -170,6 +178,7 @@ class DenseNeuralNetwork(object):
         return
 
     def predict(self, x):
+        if self.verbose >= 2: print("\n\n\nCalling DenseNeuralNetwork.predict() method\n\n")
         if self.classifier:
             y_prob = self.model.predict(x, batch_size=self.batch_size)
             y_out = self.y_labels[np.argmax(y_prob, axis=1)].ravel()
