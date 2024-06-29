@@ -114,7 +114,8 @@ def main():
                                                     filter_counter_gradient=filter_counter_gradient,
                                                     devVar=config['k_fold_cross_validation']['devVar'],
                                                     N=config['k_fold_cross_validation']['N'],
-                                                    k=config['k_fold_cross_validation']['k'])
+                                                    k=config['k_fold_cross_validation']['k'],
+                                                    scramble=config['k_fold_cross_validation']['scramble'])
 
     # tempdf = data['test']
     # data['test'] = data['validate']

@@ -106,3 +106,5 @@ venv.bak/
 #large unneeded data files (can be re-optained on casper)
 hector/mvco_mlsl_qc.csv
 hector/models/
+hector/model2/
+hector/my_dir
