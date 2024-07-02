@@ -115,6 +115,7 @@ def main():
                                                     devVar=config['k_fold_cross_validation']['devVar'],
                                                     N=config['k_fold_cross_validation']['N'],
                                                     k=config['k_fold_cross_validation']['k'],
+                                                    holdout_ratio=config['k_fold_cross_validation']['holdout_ratio'],
                                                     scramble=config['k_fold_cross_validation']['scramble'])
 
     # tempdf = data['test']

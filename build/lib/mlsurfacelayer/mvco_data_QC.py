@@ -586,7 +586,23 @@ def merge_dataframes(df_list):
     test_df = df_list[-1] # The last DataFrame will be the test set
     return train_df, val_df, test_df
 
-def load_derived_data_random_test_train_val(filename, dropna=False, filter_counter_gradient=False, devVar=None, N=10, k=0, scramble=False):
+
+def merge_dataframes_final_model(df_list):
+    # Check if the list contains at least 10 DataFrames
+    if len(df_list) < 10: raise ValueError("df_list must contain at least 10 DataFrames")
+
+    # Concatenate the first 9 DataFrames for training
+    train_df = pd.concat(df_list[:9], ignore_index=True)
+    
+    # The last DataFrame will be the validation set
+    val_df = df_list[9]
+    
+    # Create an empty DataFrame for the test set
+    test_df = pd.DataFrame()
+    
+    return train_df, val_df, test_df
+
+def load_derived_data_random_test_train_val(filename, dropna=False, filter_counter_gradient=False, devVar=None, N=10, k=0, scramble=False, holdout_ratio=None):
     """
     Load derived data file, remove NaN events, and split the data into training and test sets.
 
@@ -643,22 +659,35 @@ def load_derived_data_random_test_train_val(filename, dropna=False, filter_count
     
     data["test"] = all_data.loc[all_data.index.isocalendar().week.isin(testWeeks)]
     data["validate"] = all_data.loc[all_data.index.isocalendar().week.isin(validateWeeks)]
-
-    # a = data["test"].index
-    # b = data["validate"].index
-    # Concatenate arrays 
-    # c = pd.concat([pd.Series(a), pd.Series(b)])
-    # data["train"] = all_data.loc[all_data.index.difference(c)]
     data["train"] = all_data.loc[all_data.index.difference(pd.concat([pd.Series(data["test"].index), 
                                                                         pd.Series(data["validate"].index)]))]
 
     if scramble == True:
         all_data = shuffle(all_data, random_state=42)
 
+    if holdout_ratio != None:
+        # Calculate holdout set size
+        holdout_size = int(len(all_data) * holdout_ratio)
+        data["holdout"] = all_data.iloc[:holdout_size]
+        print("data holdout",len(data['holdout']))
+        print(f'data all {len(all_data)}')
+
+        # Remaining Data
+        all_data = all_data.iloc[holdout_size:]
+
+        # Save holdout set to CSV
+        data["holdout"].to_csv("mvco_mlsl_holdout.csv", na_rep='?')
+
     if devVar == "kfold":
         df_list = split_dataframe(all_data, N)              # into N smaller DataFrames
         df_list = shift_df_list(df_list, k)                 # shift df's in list to get the correct kfold
         train, validate, test = merge_dataframes(df_list)   # remerge the training and return
+        data = {'train': train, 'validate': validate, 'test': test} # create dictionary to return
+
+    if devVar == "kfold_final_model": # leave test set empty 
+        df_list = split_dataframe(all_data, N)              # into N smaller DataFrames
+        df_list = shift_df_list(df_list, k)                 # shift df's in list to get the correct kfold
+        train, validate, test = merge_dataframes_final_model(df_list)   # remerge the training and return
         data = {'train': train, 'validate': validate, 'test': test} # create dictionary to return
 
     # train.to_csv("../hector/mvco_train_qc.csv", na_rep = '?')

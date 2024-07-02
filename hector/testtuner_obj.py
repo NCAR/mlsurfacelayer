@@ -17,6 +17,7 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error
 from mlsurfacelayer.metrics import mean_error, hellinger_distance, pearson_r2
 
 from tensorflow.keras.layers import Input
+import pandas as pd
 
 
 class MyHyperModel(kt.HyperModel):
@@ -29,6 +30,7 @@ class MyHyperModel(kt.HyperModel):
         # Build and return the model instance
         return build_model(hp, self.config, self.args, self.verbose)
 
+    # Room here to implement parallelism : of the executions per trial
     def fit(self, hp, model, *args, **kwargs):
         if self.args.verbose >= 2: print('\n\n\nCalling MyHyperModel.fit() method\n\n')
         scores = []
@@ -59,6 +61,7 @@ def build_model(hp, config, args, verbose=0):
                                                     devVar=config['k_fold_cross_validation']['devVar'],
                                                     N=config['k_fold_cross_validation']['N'],
                                                     k=0,
+                                                    holdout_ratio=config['k_fold_cross_validation']['holdout_ratio'],
                                                     scramble=config['k_fold_cross_validation']['scramble'])
         output_type = args.predictand_type
         input_column = config["input_columns"][output_type]
@@ -76,8 +79,9 @@ def build_model(hp, config, args, verbose=0):
         model_config.update({
             "hidden_layers": hp.Choice('hidden_layers', values=[1, 3, 5]),
             "lr": hp.Choice('learning_rate', values=[1e-2, 1e-3, 1e-4]),
-            "optimizer": hp.Choice('optimizer', values=['adam', 'sgd']),
-            "loss": hp.Choice('loss', values=['mean_squared_error', 'mean_absolute_error'])
+            "hidden_neurons": hp.Choice('hidden_neurons', values=[16, 32, 64, 128, 256])
+            # "optimizer": hp.Choice('optimizer', values=['adam', 'sgd']),
+            # "loss": hp.Choice('loss', values=['mean_squared_error', 'mean_absolute_error'])
         })
         x, y = scaled_train[:, :-1], scaled_train[:, -1]
         inputs = x.shape[1]
@@ -97,6 +101,7 @@ def build_model(hp, config, args, verbose=0):
     
     return model
 
+# Room here to implement parallelism : of the kfold cross val
 def parallel_cross_val_score(hp, config, model, args, verbose=0):
     if args.verbose >= 2: print('Inside parallel_cross_val_score:')
     scores = []
@@ -123,6 +128,7 @@ def cross_val_score(hp, config, model, args, fold, verbose=0):
                                                     devVar=config['k_fold_cross_validation']['devVar'],
                                                     N=config['k_fold_cross_validation']['N'],
                                                     k=fold,
+                                                    holdout_ratio=config['k_fold_cross_validation']['holdout_ratio'],
                                                     scramble=config['k_fold_cross_validation']['scramble'])
 
     if model_type == "random_forest":
@@ -163,9 +169,8 @@ def cross_val_score(hp, config, model, args, fold, verbose=0):
     
     return score
 
-
 # Define the hyperparameter tuning function
-def hyperparameter_tuning(config, args, verbose=0):
+def hyperparameter_tuning(config, args, verbose=0, type='grid'):
     # class MyHyperModel(kt.HyperModel):
     #     def build(self, hp):
     #         return build_model(hp, config, verbose=verbose)
@@ -182,22 +187,35 @@ def hyperparameter_tuning(config, args, verbose=0):
 
     hypermodel = MyHyperModel(config, args, verbose)
 
-    tuner = kt.BayesianOptimization(
-        hypermodel,
-        objective='val_loss',
-        overwrite=True,
-        max_trials=args.max_trials,
-        executions_per_trial=1,  # Sequential execution
-        directory=args.directory,
-        project_name=args.project_name
-    )
+    if type == 'grid':
+        tuner = kt.tuners.GridSearch(
+            hypermodel,
+            objective='val_loss',
+            overwrite=True,
+            directory=args.directory,
+            project_name=args.project_name
+        )
+    
+    else:
+        tuner = kt.BayesianOptimization(
+            hypermodel,
+            objective='val_loss',
+            overwrite=True,
+            max_trials=args.max_trials,
+            executions_per_trial=1,  # Sequential execution
+            directory=args.directory,
+            project_name=args.project_name
+        )
+        
 
     # Placeholder data required by the search function, it won't be used
     dummy_data = np.zeros((1, 1))
+    tuner.search_space_summary()
     tuner.search(dummy_data, dummy_data)
 
-    best_hps = tuner.get_best_hyperparameters(num_trials=1)[0]
-    return best_hps
+    # best_hps = tuner.get_best_hyperparameters(num_trials=1)[0]
+    # return best_hps
+    return tuner
 
 if __name__ == "__main__":
     metrics = {
@@ -217,10 +235,10 @@ if __name__ == "__main__":
     parser.add_argument("--directory", type=str, default="my_dir")
     parser.add_argument("--project_name", type=str, default="hyperparam_tuning_")
     parser.add_argument("--max_trials", type=int, default=10)
+    parser.add_argument("--search_type", type=str, default='bay')
     args = parser.parse_args()
 
-    with open(args.config, "r") as config_file:
-        config = yaml.load(config_file, Loader=yaml.FullLoader)
+    with open(args.config, "r") as config_file: config = yaml.load(config_file, Loader=yaml.FullLoader) # loads in the configs from the yaml
 
     if args.model_type is None:
         print('No model type was given. Search will be cancelled.')
@@ -237,7 +255,31 @@ if __name__ == "__main__":
     # }
 
     # Assuming config is defined and contains necessary keys
-    best_hyperparameters = hyperparameter_tuning(config, args, verbose=args.verbose)
+    tuner = hyperparameter_tuning(config, args, verbose=args.verbose, type=args.search_type)
 
-    # Print best hyperparameters
-    print(f"Best Hyperparameters: {best_hyperparameters}")
+    best_hyperparameters = tuner.get_best_hyperparameters(num_trials=1)[0]
+
+    print('\n\n')
+    tuner.search_space_summary()
+
+    tuner.results_summary() # prints summary of top 10 trials
+
+    print('\n\n\n')
+
+    # trials = tuner.oracle.get_best_trials() # Retrieve all trials
+    trials = tuner.oracle.get_best_trials(num_trials=len(tuner.oracle.trials)) # Retrieve all trials
+
+    trial_data = [] # Create a list to store trial information
+
+    # Collect trial information
+    for trial in trials:
+        trial_info = {
+            "Trial ID": trial.trial_id,
+            "Hyperparameters": trial.hyperparameters.values,
+            "Score": trial.score,
+            "Status": trial.status
+        }
+        trial_data.append(trial_info)
+
+    df = pd.DataFrame(trial_data) # Convert to DataFrame
+    df.to_csv(f'{args.directory}/{args.project_name}/trial_results_{args.project_name}.csv', index=False) # Save to CSV

@@ -116,6 +116,7 @@ k_fold_cross_validation:
   devVar: 'kfold'
   N: 3
   k: 0
+  holdout_ratio: 0.1
   scramble: True
 
 model_config:
@@ -133,5 +134,5 @@ model_config:
     lr: 0.001
     activation: tanh
     l2_weight: 0.0
-    min_delta: 0
-    patience: 50
+    min_delta: 0.01
+    patience: 25

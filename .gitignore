@@ -107,4 +107,5 @@ venv.bak/
 hector/mvco_mlsl_qc.csv
 hector/models/
 hector/model2/
-hector/my_dir
+hector/my_dir/
+hector/loss/
