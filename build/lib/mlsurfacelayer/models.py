@@ -304,16 +304,18 @@ def predict_decision_tree_frame(input_data, dt_frame):
 
 # tried to test but would require data, too complicated  giving up for now -hector
 if __name__ == "__main__":
-    import yaml
-    import argparse
-    parser = argparse.ArgumentParser()
-    parser.add_argument("config", help="Config yaml file")
-    args = parser.parse_args()
-    with open(args.config, "r") as config_file:
-        config = yaml.load(config_file,Loader=yaml.FullLoader)
+    # import yaml
+    # import argparse
+    # parser = argparse.ArgumentParser()
+    # parser.add_argument("config", help="Config yaml file")
+    # args = parser.parse_args()
+    # with open(args.config, "r") as config_file:
+    #     config = yaml.load(config_file,Loader=yaml.FullLoader)
 
-    model_configs = config["model_config"]
-    testNN = DenseNeuralNetwork(**model_configs)
+    # model_configs = config["model_config"]s
+    # testNN = DenseNeuralNetwork(**model_configs)
+    # from sklearn.ensemble import RandomForestRegressor
+    # print(type(RandomForestRegressor))
 
 
     

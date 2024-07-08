@@ -115,6 +115,7 @@ def main():
                                                     devVar=config['k_fold_cross_validation']['devVar'],
                                                     N=config['k_fold_cross_validation']['N'],
                                                     k=config['k_fold_cross_validation']['k'],
+                                                    holdout_ratio=config['k_fold_cross_validation']['holdout_ratio'],
                                                     scramble=config['k_fold_cross_validation']['scramble'])
 
     # tempdf = data['test']
@@ -138,8 +139,9 @@ def main():
         #
         # Predictands will also be compute using Monin Obukhov Similarity Theory
         #
-        pred_columns.append(output_type + "-" + "mo_branko")
-        pred_columns.append(output_type + "-" + "mo_alternate")
+        # pred_columns.append(output_type + "-" + "mo_branko")
+        # pred_columns.append(output_type + "-" + "mo_alternate")
+        pred_columns.append(output_type + "-" + "mo")
 
     #
     # Initialize the model prediction data frame
@@ -168,56 +170,32 @@ def main():
     if not exists(out_dir):
         makedirs(out_dir)
 
-    # Save to a YAML file
+    # Save the YAML config used for this model to the results folder (allows us to look at the params used)
     with open(out_dir + '/config_info.yml', 'w') as file:
-        # print(config)
-        # print(out_dir)
-        # print(file)
         yaml.dump(config, file) 
 
-    #
-    # Calculate the predictands using MOST
-    #
+    ''' ---------------------------------------------- Calculate the predictands using MOST ---------------------------------------------- '''
+    
     print("Monin Obukhov estimations of predictands:")
-   
+
     #
     # Loop through the test data samples and call the monin obukhov code with
     # predictors needed for the calculation
     #
-    
     for d, date in enumerate(data["test"].index):
-        if d % 1000 == 0: print(d,date)
-        # print('\n\n\n',data['test'].iloc[d-1])
-        # print('\n\n\n',data['test'].iloc[d])
-        # print('\n\n\n',data['test'].iloc[(d+1)])
+        if d % 1000 == 0: print('computing MOST: ',d,date)
         mo_out = mo_fluxes_branko(data["test"].loc[date, "bulk_richardson:18.4_m:none"].astype(float), #mix of both qc and non-qc variables
-                                        data["test"].loc[date, "skin_virtual_potential_temperature:0_m:K"].astype(float), #qc
-                                        data["test"].loc[date, "water_sfc_temperature:0_m:K"].astype(float), #qc
-                                        data["test"].loc[date, "wind_speed:18.4_m:m_s-1"].astype(float), #non-qc
-                                        data["test"].loc[date, "wave_height:0_m:m"].astype(float), #non-qc
-                                        data["test"].loc[date, "potential_temperature:18.4_m:K"].astype(float), #qc
-                                        data["test"].loc[date, "wave_phase_speed:0_m:m_s-1"].astype(float), #non-qc
-                                        18.4)
+                                    data["test"].loc[date, "skin_virtual_potential_temperature:0_m:K"].astype(float), #qc
+                                    data["test"].loc[date, "water_sfc_temperature:0_m:K"].astype(float), #qc
+                                    data["test"].loc[date, "wind_speed:18.4_m:m_s-1"].astype(float), #non-qc
+                                    data["test"].loc[date, "wave_height:0_m:m"].astype(float), #non-qc
+                                    data["test"].loc[date, "potential_temperature:18.4_m:K"].astype(float), #qc
+                                    data["test"].loc[date, "wave_phase_speed:0_m:m_s-1"].astype(float), #non-qc
+                                    18.4)
         # print('mo_branko', mo_out)
-        model_predictions.loc[date, "momentum_flux-mo_branko"] = mo_out[0]
-        model_predictions.loc[date, "heat_flux-mo_branko"] = mo_out[1]
+        model_predictions.loc[date, "momentum_flux-mo"] = mo_out[0]
+        model_predictions.loc[date, "heat_flux-mo"] = mo_out[1]
         # model_predictions.loc[date, "kin_heat_flux-mo_branko"] = mo_out[0]*mo_out[1] 
-
-        mo_out = mo_fluxes_alternate(data["test"].loc[date, "bulk_richardson:18.4_m:none"].astype(float), #mix of both qc and non-qc variables
-                                        data["test"].loc[date, "skin_virtual_potential_temperature:0_m:K"].astype(float), #qc
-                                        data["test"].loc[date, "water_sfc_temperature:0_m:K"].astype(float), #qc
-                                        data["test"].loc[date, "wind_speed:18.4_m:m_s-1"].astype(float), #non-qc
-                                        data["test"].loc[date, "wave_height:0_m:m"].astype(float), #non-qc
-                                        data["test"].loc[date, "potential_temperature:18.4_m:K"].astype(float), #qc
-                                        data["test"].loc[date, "wave_phase_speed:0_m:m_s-1"].astype(float), #non-qc
-                                        18.4)
-        # print('mo_alternate', mo_out)
-        model_predictions.loc[date, "momentum_flux-mo_alternate"] = mo_out[0]
-        model_predictions.loc[date, "heat_flux-mo_alternate"] = mo_out[1]
-        # model_predictions.loc[date, "kin_heat_flux-mo_alternate"] = mo_out[0]*mo_out[1] 
-
-        #if d % 1000 == 0:
-        #    print(date, mo_out[0], model_predictions.loc[date, "friction_velocity-mo"])
     
     #
     # Compute the error in the MOST estimations of the predictands 
@@ -227,10 +205,11 @@ def main():
         #
         # Get the predictand label used in the model_metrics dataframe
         #
-        mo_predictand_label = output_type + "-" + "mo_branko"
-        mo_predictand_label2 = output_type + "-" + "mo_alternate"
+        mo_predictand_label = output_type + "-" + "mo"
+        # mo_predictand_label = output_type + "-" + "mo_branko"
+        # mo_predictand_label2 = output_type + "-" + "mo_alternate"
         # mo_predictand_label = output_type
-        print( "label", mo_predictand_label, mo_predictand_label2 )
+        print( "label", mo_predictand_label)
 
         #
         # Compute the different error metrics for each mo estimated predictand 
@@ -238,24 +217,28 @@ def main():
         for model_metric in model_metric_types:
             # Ensure there are no NaNs in your predictions
             valid_indices = ~np.isnan(data["test"][output_columns[output_type]].values) & ~np.isnan(model_predictions[mo_predictand_label].values)
-            valid_indices2 = ~np.isnan(data["test"][output_columns[output_type]].values) & ~np.isnan(model_predictions[mo_predictand_label2].values)
 
             print('length of most comps valid cases (success converging)')
             print(len(valid_indices))
-            print(len(valid_indices2))
 
             #
             # Execute the metric function and for this mo index label and metric column
             # fill in the model_metrics data frame  
             #
             model_metrics.loc[mo_predictand_label,model_metric] = metrics[model_metric](data["test"][output_columns[output_type]].values[valid_indices], model_predictions[mo_predictand_label].values[valid_indices])
-            model_metrics.loc[mo_predictand_label2,model_metric] = metrics[model_metric](data["test"][output_columns[output_type]].values[valid_indices2], model_predictions[mo_predictand_label2].values[valid_indices2])
             #
             # Output results
             #
             print(f"{mo_predictand_label:30s} {model_metric:20s}: {model_metrics.loc[mo_predictand_label, model_metric]:.15f}")
-            print(f"{mo_predictand_label2:30s} {model_metric:20s}: {model_metrics.loc[mo_predictand_label2, model_metric]:.15f}")
+
     
+    ''' ------------------------------------------- END of Calculate the predictands using MOST ------------------------------------------ '''
+    
+
+
+
+
+
     #
     # Create models 
     #
@@ -418,8 +401,8 @@ def main():
                 # output importance data to csv file
                 #
                 importances[output_type][model_name].to_csv(join(out_dir,
-                                                                 output_type + "_" + model_name + "_importances.csv"),
-                                                            index_label="input")
+                                                                output_type + "_" + model_name + "_importances.csv"),
+                                                                index_label="input")
             else:
                 #
                 # Run neural network on scaled test data, fill in the model_predictions column with output
@@ -432,13 +415,12 @@ def main():
                 # Compute feature importances for neutral regime 
                 #
                 print("Computing Neural Network predictor importance tests for stability regimes")
-                importances[output_type][model_name] = feature_importance(
-                    scaled_train[:,0:-1],
-                    scaled_train[:,-1],
-                    model_objects[model_name][output_type],
-                    mean_absolute_error,
-                    x_columns=input_columns[output_type],
-                    col_start="all_")
+                importances[output_type][model_name] = feature_importance(scaled_train[:,0:-1],
+                                                                            scaled_train[:,-1],
+                                                                            model_objects[model_name][output_type],
+                                                                            mean_absolute_error,
+                                                                            x_columns=input_columns[output_type],
+                                                                            col_start="all_")
                 
                 #
                 # Compute feature importances for neutral regime 
@@ -482,17 +464,8 @@ def main():
             
             # Unscale the Neural Networks predictions before calculating the metrics
             if model_name == "neural_network":
-                # print('---------------- testing here ----------------\n')
-                # print("\nmodel_predictions[predictandLabel_model].values\n", model_predictions[predictandLabel_model].values)
-                # print("\ndata['test'][output_columns[output_type]].values\n", data["test"][output_columns[output_type]].values)
-                # # print("scaled_test[:,0:-1]\n", scaled_test[:,0:-1])
-                # print("scaled_test[:,0:-1]\n", scaled_test[:,-1:])
-                # print("\ninput_scalers[output_type].scale_[len(input_scalers[output_type].scale_) - 1 ]\n", input_scalers[output_type].scale_[len(input_scalers[output_type]formatscale_) - 1 ])
-                # print("\ninput_scalers[output_type].mean_[len(input_scalers[output_type].mean_) - 1 ]\n", input_scalers[output_type].mean_[len(input_scalers[output_type].mean_) - 1 ])
-
                 scaled_test = pd.DataFrame()
-                # for model_metric in model_metric_types:
-                #     scaled_test[predictandLabel_model, model_metric] = metrics[model_metric](data["test"][output_columns[output_type]].values, model_predictions[predictandLabel_model].values)
+
                 for model_metric in model_metric_types:
                     scaled_test.loc[:, (predictandLabel_model, model_metric)] = metrics[model_metric](data["test"][output_columns[output_type]].values, model_predictions[predictandLabel_model].values)
                     model_metrics.loc[predictandLabel_model, model_metric] = metrics[model_metric](data["test"][output_columns[output_type]].values, model_predictions[predictandLabel_model].values)
@@ -500,11 +473,6 @@ def main():
                 scaled_test.to_csv(join(out_dir, predictandLabel_model + "_scaled_metrics_NN.csv"), index=False)
                 
                 model_predictions[predictandLabel_model] = model_predictions[predictandLabel_model]  * input_scalers[output_type].scale_[len(input_scalers[output_type].scale_) - 1 ] + input_scalers[output_type].mean_[len(input_scalers[output_type].mean_) - 1 ]
-                
-
-                # print("model_predictions[predictandLabel_model].values\n", model_predictions[predictandLabel_model].values)
-                # break
-            
 
             #
             # Compute error metrics

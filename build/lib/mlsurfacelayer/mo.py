@@ -2,6 +2,7 @@ from math import log, atan, sqrt
 import numpy as np
 from numba import jit
 from scipy.optimize import *
+import pandas as pd
 
 #@jit(nopython=True)
 def mo_similarity(u10, v10, tsk, t2, qsfc, q2, psfc, mavail=1, z0=0.01, zt0=0.001, z10=10.0, z2=2.0):
@@ -372,254 +373,123 @@ def mo_similarity_two_levels(u_low, v_low, u_high, v_high, t_low, t_high, pressu
     return ustar, tstar, wthv0, zeta_high, phi_m, phi_h
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# def psi_h_branko(z,L,Ri):
-    
-#     if Ri < 0:
-#         # return  2 * np.log( (1 + (1-z/L)**.5 )/2)
-        
-#         # t7 = (z/L)
-#         # t6 = (1-16(t7))
-#         # t5 = t6**.5 
-#         # t4 = 1 + t5
-#         # t3 = t4/2
-#         # t2 = log(t3)
-#         # t1 = (2 * t2) # should be correct according to branko but double check anyways
-#         # return t1
-        # return (2 * log( (1 + (1-16*(z/L))**.5 )/2)) # should be correct according to branko but double check anyways
-#     else:
-#        return -z/L
-def psi_h_branko(z, L, Ri, verbose=0):
-    verbose = 0
-    # try:
-    if Ri < 0:
-        if verbose >= 2:
-            print(f"Calculating psi_h_alternate for z={z}, L={L}, Ri={Ri}")
-        # return  2 * np.log( (1 + (1-z/L)**.5 )/2)
-        result = 2 * np.log((1 + (1 - 16 * (z / L))**0.5) / 2) # should be correct according to branko but double check anyways
-        if verbose >= 2:
-            print(f"psi_h_alternate result: {result}")
-        return result
+# 
+# MOST see: https://atmos.washington.edu/~breth/classes/AS547/lect/lect6.pdf
+#
+def psi_h(z, L):
+    if z/L < 0:
+        x = (1 - 16.0 * z / L) ** 0.25
+        result = 2 * np.log(0.5 * (1 + x**2))
     else:
-        result = -z / L
-        if verbose >= 2:
-            print(f"psi_h_alternate result: {result}")
-        return result
-    # except Exception as e:
-    #     print('error encountered')
-    #     return result, e
-    # else:
-    #     return result
+        result = -5.0 * z / L
+    return result
 
-def psi_h_alternate(z,L,Ri):
-    
-    if Ri < 0:
-        # return  2 * np.log( (1 + (1-z/L)**.5 )/2)
-        return 2 * log( (1 + (1-16*(z/L))**.5 )/2) # should be correct according to branko but double check anyways
+#
+# MOST see:  https://atmos.washington.edu/~breth/classes/AS547/lect/lect6.pdf
+#
+def psi_m(z, L):
+    if z/L < 0:
+        x = (1 - 16.0 * z / L) ** 0.25
+        result = np.log(((1 + x**2) / 2) * ((1 + x) / 2) ** 2)- 2*np.arctan(x) + np.pi / 2
     else:
-        return -z/L
+        result = -5.0 * z / L
+    return result
 
-# def psi_m_branko(z,L,Ri):
-#     if Ri < 0:
-#         # return (2*np.log((1+(1-z/L)**.5)/2) + np.log((1+(1-z/L)**.5)/2) - (2 * np.arctan((1-z/L)**.25)) + np.pi/2)
-#         return (2*log((1+(1-16*(z/L))**.25)/2) + log((1+(1-16*(z/L))**.5)/2) - (2 * atan((1-16*(z/L))**.25)) + np.pi/2) # should be correct according to branko but double check anyways
-#     else:
-#         return -z/L
-def psi_m_branko(z, L, Ri, verbose=0):
-    verbose = 0
-    # try:
-    if Ri < 0:
-        if verbose >= 2:
-            print(f"Calculating psi_m_branko for z={z}, L={L}, Ri={Ri}")
-        # return (2*np.log((1+(1-z/L)**.5)/2) + np.log((1+(1-z/L)**.5)/2) - (2 * np.arctan((1-z/L)**.25)) + np.pi/2)
-        result = (2 * np.log((1 + (1 - 16 * (z / L))**0.25) / 2) + 
-                  np.log((1 + (1 - 16 * (z / L))**0.5) / 2) - 
-                  (2 * np.arctan((1 - 16 * (z / L))**0.25)) + 
-                  np.pi / 2) # should be correct according to branko but double check anyways
-        if verbose >= 2:
-            print(f"psi_m_branko result: {result}")
-        return result
-    else:
-        result = -z / L
-        if verbose >= 2:
-            print(f"psi_m_branko result: {result}")
-        return result
-    # except Exception as e:
-    #     print('error found')
-    #     return result, e
-    # else:
-    #     return result
-    
-def psi_m_alternate(z,L,Ri):
-    if Ri < 0:
-        # return (2*np.log((1+(1-z/L)**.5)/2) + np.log((1+(1-z/L)**.5)/2) - (2 * np.arctan((1-z/L)**.25)) + np.pi/2)
-        return (2*log((1+(1-16*(z/L))**.5)/2) + log((1+(1-16*(z/L))**.5)/2) - (2 * atan((1-16*(z/L))**.25)) + np.pi/2) # should be correct according to branko but double check anyways
-    else:
-        return -z/L
-    
-
-
-def mo_similarity_offshore_branko(bulkRi, skinPotTemp, sfcTemp, wspd, waveHt, potTemp, wavePhaseSpd,height):
-
-    """
-    Calculate flux information based on Monin-Obukhov similarity theory by solving 
-    U(z_40 )=u_*/κ [ln⁡〖(z_40/z_0 )-ψ_m (z_40/L)+ψ_m (z_0/L)〗 ]
-    Θ(z_40 )=Θ_s-u_*/(g/T κL) [ln⁡〖(z_40/z_0 )-ψ_h (z_40/L)+ψ_h (z_0/L)〗 ]
-    for u* and L after making the following substitutions:
-    L =-(u_*^3)/(g/T u_* θ_* )=-(u_*^2)/(g/T θ_* )
-    z_0=3.35〖H_s (u_*/C_p   )〗^3.4 where C-p is wavePhase speed and z_0 is surface roughness
-     
-
-    Args:
-        bulkRi: bulk richardson number  
-        skinPotTemp : skin potential temperature in deg K
-        sfcTemp: water surface temperature in deg K 
-        wspd40: wind speed at 40m in units m/s
-        waveHt: wave height in m 
-        potTemp40: potential temperature at 40m in deg K
-        wavePhaseSpd : wave phase speed in m/s 
-
-    Returns:
-        ustar: friction velocity m/s
-        tstar: temperature scale K
-    """
-
+def mo_fluxes(ustar,L,sfcTemp):
+    if any(pd.isna(value) for value in [ustar,L,sfcTemp]):
+       return np.nan, np.nan
     #
-    # karman
+    # constants:
+    # specific heat at constant pressure cp with units J/(kg K) 
+    # the acceleration of gravity g with units m/s^2
+    # density of pure, dry air kg/m^3 rho with units of kg/m^3
     #
-    k = .4
-
-    #
-    # gravity
-    #
+    #cp = 1003.5 
     g = 9.8
-
-    def myF(z):
-        ustar = z[0]
-        L = z[1]
-        z0 = 3.35 * waveHt * (ustar/wavePhaseSpd)**3.4
-        F = np.empty((2))
-        F[0] = skinPotTemp +  ustar/((g/sfcTemp)*k*L) *(np.log(height/z0)- psi_h_branko(height,L,bulkRi) + psi_h_branko(z0,L,bulkRi)) - potTemp
-        F[1] = ustar/k * (np.log(height/z0) - psi_m_branko(height,L,bulkRi) + psi_m_branko(z0,L,bulkRi)) - wspd
-        return F
-    if bulkRi < 0:
-        zGuess = np.array([.1, -1.0])
-    else:
-        zGuess = np.array([1, 100])
-
-    z , infodict, ier, mesg = fsolve(myF, zGuess, full_output=True)
-    #print (z, " ", ier, mesg)
-    
-    ustar = np.nan
-    tstar = np.nan        
-    if ier == 1:
-        ustar = z[0]
-        L = z[1]
-        tstar = -ustar*ustar*sfcTemp/(g*L)
-    return ustar, tstar
-
-
-
-def mo_similarity_offshore_alternate(bulkRi, skinPotTemp, sfcTemp, wspd, waveHt, potTemp, wavePhaseSpd,height):
-
-    """
-    Calculate flux information based on Monin-Obukhov similarity theory by solving 
-    U(z_40 )=u_*/κ [ln⁡〖(z_40/z_0 )-ψ_m (z_40/L)+ψ_m (z_0/L)〗 ]
-    Θ(z_40 )=Θ_s-u_*/(g/T κL) [ln⁡〖(z_40/z_0 )-ψ_h (z_40/L)+ψ_h (z_0/L)〗 ]
-    for u* and L after making the following substitutions:
-    L =-(u_*^3)/(g/T u_* θ_* )=-(u_*^2)/(g/T θ_* )
-    z_0=3.35〖H_s (u_*/C_p   )〗^3.4 where C-p is wavePhase speed and z_0 is surface roughness
-     
-
-    Args:
-        bulkRi: bulk richardson number  
-        skinPotTemp : skin potential temperature in deg K
-        sfcTemp: water surface temperature in deg K 
-        wspd40: wind speed at 40m in units m/s
-        waveHt: wave height in m 
-        potTemp40: potential temperature at 40m in deg K
-        wavePhaseSpd : wave phase speed in m/s 
-
-    Returns:
-        ustar: friction velocity m/s
-        tstar: temperature scale K
-    """
+    #rho = 1.293  
 
     #
-    # karman
+    # momentum flux
     #
-    k = .4
+    mf = ustar**2
 
     #
-    # gravity
+    # temperature scale
     #
-    g = 9.8
+    tstar = -ustar*ustar*sfcTemp/(g*L)
 
-    def myF(z):
-        ustar = z[0]
-        L = z[1]
-        z0 = 3.35 * waveHt * (ustar/wavePhaseSpd)**3.4
-        F = np.empty((2))
-        F[0] = skinPotTemp +  ustar/((g/sfcTemp)*k*L) *(np.log(height/z0)- psi_h_alternate(height,L,bulkRi) + psi_h_alternate(z0,L,bulkRi)) - potTemp
-        F[1] = ustar/k * (np.log(height/z0) - psi_m_alternate(height,L,bulkRi) + psi_m_alternate(z0,L,bulkRi)) - wspd
-        return F
-    if bulkRi < 0:
-        zGuess = np.array([.1, -1.0])
-    else:
-        zGuess = np.array([0.05, 100])
-
-    z , infodict, ier, mesg = fsolve(myF, zGuess, full_output=True)
-    #print (z, " ", ier, mesg)
-    
-    ustar = np.nan
-    tstar = np.nan        
-    if ier == 1:
-        ustar = z[0]
-        L = z[1]
-        tstar = -ustar*ustar*sfcTemp/(g*L)
-    return ustar, tstar
-
-def mo_fluxes_branko(*args):
-    #specific heat at constant pressure, cp=1003.5 J kg-1K-1
-    #rho = 1.293 # density of Pure, dry air
-    u, t = mo_similarity_offshore_branko(*args)
-    mf = u**2
-    # cp = 1003.5
-    # hf = t * cp * u * -1 * ad # original
-    # hf = t * cp * u * rho # wont need negative since i added it to u star
-    hf = t * u  # i dont think cp or ad is needed here, might be completely wrong
+    #
+    # heat flux
+    #
+    hf = ustar* tstar #* rho *cp
 
     return mf, hf
 
-def mo_fluxes_alternate(*args):
-    #specific heat at constant pressure, cp=1003.5 J kg-1K-1
-    # ad = 1.293 # density of Pure, dry air
-    u, t = mo_similarity_offshore_alternate(*args)
-    mf =  u**2
-    # cp = 1003.5
-    # hf = t * cp * u * -1 * ad
-    hf = t * u
+def computeMOSTfluxes(height, Ri, skinPotT, potT, wspd, waveHt, wavePhaseSpd):
 
-    return mf, hf
+   if any(pd.isna(value) for value in [Ri, skinPotT, potT, wspd, waveHt, wavePhaseSpd]):
+      return np.nan,np.nan
+
+   # Von Karman constant
+   k = 0.4
+
+   # The acceleration of gravity
+   g = 9.8
+
+   #
+   # Create array of Obukhov Length first guesses for the numerical prediction method
+   #
+   L_array = []
+   for i in range( 0,200,1):
+      if i == 0:
+         L_array.append(.001)
+      else:
+         L_array.append(i)
+         L_array.append(-i)
+
+   #
+   # The system of equations for which the roots are found
+   #
+   def myF(z):
+      ustar = z[0]
+      L = z[1]
+      # Surface roughness estimation
+      # z0 = Hs*3.35*(u*/wavePhaseSpeed)^3.4
+      #    = waveHt * 3.35 * (ustar/wavePhaseSpeed)**3.4
+      #
+      # F[0] = skinPotT -  thetaStar/k *(log(18.4/zt)- psi_h(z,L,Ri) - potTemp
+      # F[1] = ustar/k * (log(18.4/z0) - psi_m(z,L,Ri)) - wspd
+      # 
+      # For substitution for thetaStar in F[0]
+      # L = -(u*)^2/(thetaStar*g/T)
+
+      F = [None,None]
+      # No dependence on ocean vars
+      #F[0] = ustar/k * (np.log(18.4 /(.014 * ustar* ustar/g) ) - psi_m(18.4,L)) - wspd
+      #F[1] = skinPotT + (ustar**2 )*skinPotT/(k*g*L) * (np.log(18.4 /(.014 * ustar*ustar/g)) - psi_h(18.4,L)) - potT18
+      # Dependence on ocean vars
+      # ignore invalid inputs to even roots
+      with np.errstate(invalid='ignore'):
+         F[0] = ustar/k * (np.log(height /(waveHt*3.35*(ustar/wavePhaseSpd)**3.4) ) - psi_m(height,L)) - wspd
+         F[1] = skinPotT + (ustar**2 )*skinPotT/(k*g*L) * (np.log(height /(waveHt*3.35*(ustar/wavePhaseSpd)**3.4)) - psi_h(height,L)) - potT18
+      return F
+
+   count = 0
+   ier = -1
+   while count < 399 and ier != 1:
+      zGuess = [.1,L_array[count]]
+      z, infodict, ier, mesg = fsolve(myF, zGuess, full_output=True, xtol=0.001)
+      #      
+      #result = least_squares(myF, zGuess, bounds=([.00001, -20000],[6,20000]), xtol=0.001)
+      #if  result.status > 2:
+      #    ier = 1
+      #    z = result.x                                
+      count = count + 1
+
+   #
+   # note that z[0] is ustar and z[1] is obukhov length L
+   #
+   momentum_flux , heat_flux = mo_fluxes(z[0],z[1], skinPotT)
+
+   return momentum_flux, heat_flux
+

@@ -2,86 +2,52 @@ import pandas as pd
 from glob import glob
 from os.path import join
 from .derived import *
+from mlsurfacelayer import mo
 from pvlib.solarposition import get_solarposition
 import datetime
 from sklearn.utils import shuffle
 
 '''
 This file will process the QC dataset, so that the inputs to the ML model are part non-QC and part QC variables.
-The variables I have modified are:
-    derived_data["temperature:12_m:K"] =  celsius_to_kelvin(raw_data["AT_met_QC"]) # edited by hector
-    derived_data["water_sfc_temperature:0_m:K"] = celsius_to_kelvin(raw_data["SST_QC"]) # edited by hector
-    derived_data["pressure:12_m:hPa"] = raw_data["P_met_QC"] # edited by hector
-    derived_data["u_wind:18.4_m:m_s-1"], derived_data["v_wind:18.4_m:m_s-1"] = raw_data["u1_QC"], raw_data["v1_QC"] # edited by hector
-    derived_data["u_wave:0_m:m_s-1"], derived_data["v_wave:0_m:m_s-1"] = raw_data["uc_QC"], raw_data["vc_QC"] # edited by hector
-    derived_data["mixing_ratio:0_m:g_kg-1"] = mixing_ratio(raw_data["SST_QC"], 100,  sea_surface_pressure) # edited by hector
+/glade/work/brummet/Oracle/data/MVCO/processed/qced_MVCO_ocn_sonic_vaisala_QC.20010619-20160610.outer_join.csv
+# Vars of interest
+DateTime,
+wave_height:0_m:m, wave_period:0_m:deg, wave_dir:0_m:deg, 
+w:18.4_m:m/s, 
+uv_3D1:18.4_m:m2/s2, uw_3D1:18.4_m:m2/s2, vw_3D1:18.4_m:m2/s2, wT_3D1:18.4_m:m/s K, 
 
-    derived_data["pressure:18.4_m:hPa"] = raw_data["P_QC"] # edited by hector
-    derived_data["temperature:18.4_m:K"] =  celsius_to_kelvin(raw_data["AT_QC"]) # edited by hector
-    derived_data["relative_humidity:18.4_m:%"]=  raw_data['RH_QC'] # edited by hector
-    
-    "potential_temperature:18.4_m:K",
-    "mixing_ratio:18.4_m:g_kg-1"
+# wind components
+u1_QC, v1_QC,
+u2_QC, v2_QC,
 
-we are calculating friction velocity using the momentum flux
-    # Calculate friction velocity (u_star)
-    air_density = 1.293
-    derived_data['friction_velocity:18.4_m:m_s-1'] = np.sqrt(derived_data['momentum_flux:18.4_m:m2_s-2'] / air_density)
+# UW covariance ? (reported as momentum flux, MVCO QC paper
+# references conversion of u,v to vector in direction of wind
+# which could explain )
+UpWpBar1_QC, UpWpBar2_QC,
+
+# Heat flux
+WpTpBar1_QC, WpTpBar2_QC,
+ 
+# air temp, humidity, pressure at 18.4m  
+AT_QC, RH_QC, P_QC, 
+
+#sea surface temp
+SST_QC,
+
+# current direction components
+uc_QC, vc_QC,
+
+# Short wave and long wave radiation
+SW_QC, 
+LW_QC, LW_QC, LW_QC, LW_QC, why 4 of these?
 
 '''
-
-
-# Marthas Vineyard Coastal Observatory data ingest and feature calculator
-#DateTime
-#wave_height:0_m:m
-#wave_period:0_m:deg
-#wave_dir:0_m:deg
-#water_temp:0_m:C
-#bottom_current:0_m:cm/s
-#bottom_current_dir:0_m:deg_toward
-#near_surf_current:0_m:cm/s
-#near_surf_current_dir:0_m:deg
-#press-air_pres-nominal_depth:0_m:m   (pressure minus air pressure minus nominal depth -- tide paros
-#water_temp_2:0_m:C
-#salinity:0_m:PSU
-#num_records_per_period:12_m:count
-#air_temp:12_m:C
-#RH:12_m:%
-#press:12_m:mb
-#air_temp_median:12_m:C
-#RH_median:12_m:%
-#press_median:12_m:mb
-#air_temp_std:12_m:C
-#RH_std:12_m:%
-#press_std:12_m:mb
-#air_temp_len:12_m:count
-#RH_len:12_m:count
-#pres_len:12_m:count
-#num_records_per_period:18.4_m:count
-#wspd_3D1:18.4_m:m/s ( 3D1 is a sensor)
-#wdir_3D1:18.4_m:deg
-#w:18.4_m:m/s
-#air_temp_speed_of_sound_3D1:18.4_m:C
-#wspd_3D1_inst:18.4_m:m/s
-#wspd_3D1_inst_2:18.4_m:m/s
-#air_temp_speed_of_sound_3D1_2:18.4_m:C
-#sig_U:18.4_m:UNK ( sig means 
-#sig_V:18.4_m:UNK
-#sig_W:18.4_m:UNK
-#sig_T:18.4_m:UNK
-#uv_3D1:18.4_m:m2/s2  covariance
-#uw_3D1:18.4_m:m2/s2  covariance
-#vw_3D1:18.4_m:m2/s2  covariance
-#wT_3D1:18.4_m:m/s K  covariance vertical wind speed with air temp
-#wspd_3D1_length:18.4_m:count recs between 0 100 < 4*std
-#tson_3D1_length:18.4_m:count recs between -25 and 35 and < 4*std
-
 
 def process_mvco_data(csv_path, out_file, nan_column="", mvco_lon=-70.544, mvco_lat=41.3435,
                         elevation=0.0, average_period=None):
     """
     This function loads all of the MVCO data and then calculates the relevant derived quantities necessary
-    to build the machine learning model for parameterization of surface layer.
+    to build the machine learning model for parameterization of surface layer momentum and heat fluxes.
 
     Columns in derived data show follow the following convention "name_of_variable:level:units". Colons separate
     different components, and underscores separate words in each subsection. `df.columns.str.split(":").str[0]` extracts
@@ -110,79 +76,53 @@ def process_mvco_data(csv_path, out_file, nan_column="", mvco_lon=-70.544, mvco_
     #
     # Create a time series index using the time
     #
-    # raw_data.index = pd.to_datetime(raw_data["DateTime"], format="%Y-%m-%d %H:%M:%S")
-    # raw_data.index = pd.to_datetime(raw_data["DateTime"], format='mixed')
-    raw_data.index = pd.to_datetime(raw_data["DateTime"], format="%m/%d/%y %H:%M") # hector edit
+    raw_data.index = pd.to_datetime(raw_data["DateTime"], errors='coerce' )#format="%m/%d/%y %H:%M:%m") 
 
-    verbose = 2 # hector edit, 
+    verbose = 2  
     # if verbose = 2, debugging print statements will activate
     # if verbose = 1, general info to be printed that user might want to know
     # if verbose = 0, do nothing
 
     #
-    # Filter out data based on "bad" data in nan_columns
-    #
-    #raw_data = raw_data.loc[~pd.isna(raw_data[nan_column])]
-   
-    #
     # List data columns included in training dataset
     #
     derived_columns = ["zenith:0_m:degrees",
                        "azimuth:0_m:degrees",
-                       "temperature:12_m:K",
-                    #    "temperature_med:12_m:K",
-                    #    "temperature_std:12_m:K",
+                       "GHI:0_m:W_m-2",
+                       "pressure:18.4_m:hPa",
+                       "sea_surface_pressure:0_m:hPa",
+                       "relative_humidity:18.4_m:%",
                        "temperature:18.4_m:K",
-                    #    "temperature2:18.4_m:K", # second sensor, only have data from 2020+, dont have wave data during those years so is currently unusable - hector Jun 2024
+                       "potential_temperature:18.4_m:K", 
                        "water_sfc_temperature:0_m:K",
-                       "pressure:12_m:hPa",
-                    #    "pressure_med:12_m:hPa",
-                    #    "pressure_std:12_m:hPa",
-                       "potential_temperature:12_m:K",
-                       "skin_virtual_potential_temperature:0_m:K",
                        "mixing_ratio:0_m:g_kg-1",
-                       "mixing_ratio:12_m:g_kg-1",
-                       "relative_humidity:12_m:%",
+                       "mixing_ratio:18.4_m:g_kg-1",
+                       "skin_virtual_potential_temperature:0_m:K",
                        "wave_direction:0_m:degrees",
                        "wave_height:0_m:m",
                        "wave_period:0_m:s",
                        "wave_phase_speed:0_m:m_s-1",
-                       "near_surf_current:0_m:m_s-1",
-                       "near_surf_current_dir:0_m:deg",
-                       "wind_speed:12_m:m_s-1",
-                       "wind_speed:18.4_m:m_s-1",
-                       "wind_direction:18.4_m:degrees",
-                       "wind_speed_inst:18.4_m:m_s-1",
-                       "wind_direction_inst:18.4_m:degrees",
-                       "u_wind:18.4_m:m_s-1",
-                       "v_wind:18.4_m:m_s-1",
                        "u_wave:0_m:m_s-1",
                        "v_wave:0_m:m_s-1",
+                       "near_surf_current_u:0_m:m_s-1",
+                       "near_surf_current_v:0_m:m_s-1",
+                       "near_surf_current:0_m:m_s-1",
+                       "near_surf_current_dir:0_m:deg",
+                       "u_wind:18.4_m:m_s-1",
+                       "v_wind:18.4_m:m_s-1",
+                       "wind_speed:18.4_m:m_s-1",
+                       "wind_direction:18.4_m:degrees",
                        "angle_between_wind_wave:0_m:degrees",
-                       "bulk_richardson:12_m:none",
-                       "surface_roughness_charnock:0_m:m",
-                       "surface_roughness_drennan:0_m:m",
-                       #"potential_temperature_gradient:20_m:K_m-1",
-                       #"wind_speed_gradient:20_m:s-1",
-                       #"wind_speed_gradient:40_m:s-1",
+                       "bulk_richardson:18.4_m:none",
+                       "dT_dz:18.4_m:K_m-1",
+                       "dSpeed_dz:18.4_m:s-1",
                        "u_w:18.4_m:m2_s-2",
                        "v_w:18.4_m:m2_s-2",
+                       "T_w:18.4_m:C_m_s-2",
+                       "heat_flux:18.4_m:degreesC_m_s-1",
+                       "momentum_flux:18.4_m:m2_s-2",
                        "friction_velocity:18.4_m:m_s-1",
-                       "kinematic_sensible_heat_flux:18.4_m:K_m_s-1",
-                       "temperature_scale:18.4_m:K",
-                    #    'momentum_flux:18.4_m:m_2_s_2',
-                       'momentum_flux:18.4_m:m2_s-2',
-                    #    'heat_flux:18.4_m:degrees_cm/s',
-                       'heat_flux:18.4_m:degrees_C_m_s-1',
-                       'bulk_richardson:18.4_m:none',
-                       "pressure:18.4_m:hPa",
-                       "relative_humidity:18.4_m:%",
-                       "potential_temperature:18.4_m:K",
-                       "mixing_ratio:18.4_m:g_kg-1",
-                       "dt/dz",
-                       "Speed/z",
-                       "du/dz", # 'U/z' 
-                       "dv/dz" # 'V/z' since we assume a linear slope at low elevation. we perform : changeInVariable/changInHeight = [ (Var(z1) - Var(z2)) / (z1-z2) ]
+                       "temperature_scale:18.4_m:K"
                        ]
 
     print( "Calculating derived variables")
@@ -193,7 +133,6 @@ def process_mvco_data(csv_path, out_file, nan_column="", mvco_lon=-70.544, mvco_
     if verbose == 2: print("Define the derived_data dataframe: done")
     derived_data = pd.DataFrame(index=raw_data.index, columns=derived_columns, dtype=float)
 
-
     #
     # Fill in solar angles
     #
@@ -201,69 +140,89 @@ def process_mvco_data(csv_path, out_file, nan_column="", mvco_lon=-70.544, mvco_
     solar_data = get_solarposition(raw_data.index, mvco_lat, mvco_lon, altitude=elevation, method="nrel_numba")
     derived_data["zenith:0_m:degrees"] = solar_data["zenith"]
     derived_data["azimuth:0_m:degrees"] = solar_data["azimuth"]
+
+    #
+    # Global Horizontal Irradiance GHI
+    #
+    derived_data["GHI:0_m:W_m-2"] = raw_data["SW_QC"]
     
+    #
+    # Pressure
+    #
+    derived_data["pressure:18.4_m:hPa"] = raw_data["P_QC"] 
+
+    #
+    # Sea Surface pressure
+    # P0 = P18 + delta P, deltaP = rho*g*deltah, rho = 1.293 air density of Pure, dry air
+    # Note: 18.4 [m] * 9.81 [m/s^2] * 1.293 [kg/m^3] = 233.391672  Pa
+    if verbose == 2: print("Sea Surface Pressure/ Skin mixing ratio")
+    sea_surface_pressure = derived_data["pressure:18.4_m:hPa"] + 233.391672/100 
+
+    #
+    # RH
+    # 
+    derived_data["relative_humidity:18.4_m:%"]=  raw_data['RH_QC'] 
+    
+    #    
+    # Temperature  
+    #
+    if verbose == 2: print("Temperature")
+    derived_data["temperature:18.4_m:K"] =  celsius_to_kelvin(raw_data["AT_QC"])     
+
+    #
+    # Potential temperature     
+    #
+    if verbose == 2: print("Potential temperature")
+    derived_data["potential_temperature:18.4_m:K"] = potential_temperature(derived_data["temperature:18.4_m:K"], derived_data[f"pressure:18.4_m:hPa"])
+
+
     #
     # Water surface temperature
     #
     if verbose == 2: print("Water surface temperature")
-    # derived_data["water_sfc_temperature:0_m:K"] = celsius_to_kelvin(raw_data["water_temp:0_m:C"])
-    derived_data["water_sfc_temperature:0_m:K"] = celsius_to_kelvin(raw_data["SST_QC"]) # edited by hector
+    derived_data["water_sfc_temperature:0_m:K"] = celsius_to_kelvin(raw_data["SST_QC"]) 
 
     #
-    # Wave direction , height, period
+    # Mixing ratios
+    #
+    if verbose == 2: print("Skin mixing ratio")
+    derived_data["mixing_ratio:0_m:g_kg-1"] = mixing_ratio(raw_data["SST_QC"], 100,  sea_surface_pressure) 
+    derived_data["mixing_ratio:18.4_m:g_kg-1"] = mixing_ratio( derived_data["temperature:18.4_m:K"]-273, derived_data["relative_humidity:18.4_m:%"], derived_data[f"pressure:18.4_m:hPa"])
+
+    #
+    # skin virtual potential temperature
+    #
+    if verbose == 2: print("Virtual potential skin temperature : use sea surface temp")
+    derived_data[ "skin_virtual_potential_temperature:0_m:K"] = virtual_temperature( derived_data["water_sfc_temperature:0_m:K"], derived_data["mixing_ratio:0_m:g_kg-1"])
+
+    #
+    # Wave direction, direction components, height, period, wave phase speed
     #
     if verbose == 2: print("Wave direction , height, period")
     derived_data["wave_direction:0_m:degrees"] = raw_data["wave_dir:0_m:deg"]
+    derived_data["wave_phase_speed:0_m:m_s-1"] = derived_data["wave_period:0_m:s"]* 9.8/(2*np.pi)
+    derived_data["u_wave:0_m:m_s-1"] = - derived_data["wave_phase_speed:0_m:m_s-1"]*np.sin( derived_data["wave_direction:0_m:degrees"])
+    derived_data["v_wave:0_m:m_s-1"] = -derived_data["wave_phase_speed:0_m:m_s-1"]*np.cos( derived_data["wave_direction:0_m:degrees"]) 
     derived_data["wave_height:0_m:m"] = raw_data["wave_height:0_m:m"]
     derived_data["wave_period:0_m:s"] = raw_data["wave_period:0_m:deg"] # note the error in the unit -- will fix 
-    derived_data["wave_phase_speed:0_m:m_s-1"] = derived_data["wave_period:0_m:s"]* 9.8/(2*np.pi)
 
     #
     # Current variables
     #
     if verbose == 2: print("Current variables")
-    derived_data["near_surf_current:0_m:m_s-1"] =   raw_data["near_surf_current:0_m:cm/s"]/100
+    derived_data["near_surf_current_u:0_m:m_s-1"], derived_data["near_surf_current_v:0_m:m_s-1"] = raw_data["uc_QC"] /100 , raw_data["vc_QC"]/100
+    derived_data["near_surf_current:0_m:m_s-1"] = np.sqrt(derived_data["near_surf_current_u:0_m:m_s-1"]**2 + derived_data["near_surf_current_v:0_m:m_s-1"]**2) 
     derived_data["near_surf_current_dir:0_m:deg"] = raw_data["near_surf_current_dir:0_m:deg"]
-    derived_data["bottom_current:0_m:m_s-1"] = raw_data["bottom_current:0_m:cm/s"]/100
-    derived_data["bottom_current_dir:0_m:deg"] = raw_data["bottom_current_dir:0_m:deg_toward"]
+    
 
     #
-    # Wind Speed 
+    # Wind  
     #
-    if verbose == 2: print("Wind Speed")
-    # derived_data["wind_speed:18.4_m:m_s-1"] = raw_data["wspd_3D1:18.4_m:m/s"]
-
-    #
-    # Wind Direction
-    #
-    if verbose == 2: print("Wind Direction")
-    derived_data["wind_direction:18.4_m:degrees"] = raw_data["wdir_3D1:18.4_m:deg"]
-
-
-
-    #
-    # Derived data wind components
-    #
-    if verbose == 2: print("Derived data wind components")
-    # derived_data["u_wind:18.4_m:m_s-1"], derived_data["v_wind:18.4_m:m_s-1"] = wind_components(derived_data["wind_speed:18.4_m:m_s-1"], derived_data["wind_direction:18.4_m:degrees"])
-    derived_data["u_wind:18.4_m:m_s-1"], derived_data["v_wind:18.4_m:m_s-1"] = raw_data["u1_QC"], raw_data["v1_QC"] # edited by hector
-    # derived_data["u_wave:0_m:m_s-1"], derived_data["v_wave:0_m:m_s-1"] = wind_components(derived_data["wave_phase_speed:0_m:m_s-1"], derived_data["wave_direction:0_m:degrees"])
-    derived_data["u_wave:0_m:m_s-1"], derived_data["v_wave:0_m:m_s-1"] = raw_data["uc_QC"], raw_data["vc_QC"] # edited by hector
-
-
-    #
-    # Calculate wind speed using Pythagorean theorem
-    # -hector
+    if verbose == 2: print("Wind vars")
+    derived_data["u_wind:18.4_m:m_s-1"], derived_data["v_wind:18.4_m:m_s-1"] = raw_data["u1_QC"], raw_data["v1_QC"]
+    derived_data["wind_direction:18.4_m:degrees"] = np.arctan2(derived_data["u_wind:18.4_m:m_s-1"],derived_data["v_wind:18.4_m:m_s-1"]) * 180/np.pi 
     derived_data["wind_speed:18.4_m:m_s-1"] = np.sqrt(derived_data['u_wind:18.4_m:m_s-1']**2 + derived_data['v_wind:18.4_m:m_s-1']**2)
 
-
-    # derived_data["dt/dz"] = (derived_data["Var(z1)"] - derived_data["Var(z2)"]) / (z1 - z2)
-    # z2 is assumed to be 0 : height at surface of water is 0
-    z1 = 18.4
-    derived_data["dt_dz"]  = (derived_data["temperature:18.4_m:K"] - derived_data["water_sfc_temperature:0_m:K"]) / z1
-    derived_data["dSpeed_dz"]= derived_data["wind_speed:18.4_m:m_s-1"] / z1
-    derived_data["du_dz"]  = derived_data["u_wind:18.4_m:m_s-1"] / z1
-    derived_data["dv_dz"]  = derived_data["v_wind:18.4_m:m_s-1"] / z1
 
 
     derived_data["angle_between_wind_wave:0_m:degrees"] = 180/np.pi * np.arccos((derived_data["u_wave:0_m:m_s-1"] * derived_data["u_wind:18.4_m:m_s-1"] + derived_data["v_wave:0_m:m_s-1"] * derived_data["v_wind:18.4_m:m_s-1"])/(derived_data["wave_phase_speed:0_m:m_s-1"] * derived_data["wind_speed:18.4_m:m_s-1"]))
@@ -326,6 +285,19 @@ def process_mvco_data(csv_path, out_file, nan_column="", mvco_lon=-70.544, mvco_
     derived_data["temperature_std:12_m:K"] =  raw_data["air_temp_std:12_m:C"]
     # derived_data["temperature:18.4_m:K"] =  celsius_to_kelvin(raw_data["air_temp_speed_of_sound_3D1:18.4_m:C"])
     derived_data["temperature2:18.4_m:K"] =  celsius_to_kelvin(raw_data["air_temp_speed_of_sound_3D1_2:18.4_m:C"])
+
+
+
+    # derived_data["dt/dz"] = (derived_data["Var(z1)"] - derived_data["Var(z2)"]) / (z1 - z2)
+    # z2 is assumed to be 0 : height at surface of water is 0
+    if verbose == 2: print('NEW DERIVATIVE VARS')
+    z1 = float(18.4)
+    derived_data["dTempd_dz"]  = (derived_data["temperature:18.4_m:K"] - derived_data["water_sfc_temperature:0_m:K"]) / z1
+    derived_data["dSpeed_dz"]= derived_data["wind_speed:18.4_m:m_s-1"] / z1
+    # derived_data["du_dz"]  = derived_data["u_wind:18.4_m:m_s-1"] / z1 # was told in mlsl meeting not to use u or v and only use speed and direction sin & cos
+    # derived_data["dv_dz"]  = derived_data["v_wind:18.4_m:m_s-1"] / z1 
+
+
 
     #
     # flux components
@@ -433,29 +405,55 @@ def process_mvco_data(csv_path, out_file, nan_column="", mvco_lon=-70.544, mvco_
     #
     # Bulk Richardson's number Note that wspd is at a diff height 
     #  
-    if verbose == 2: print("Bulk Richardson's number Note that wspd is at a diff height ")
-    derived_data[ "bulk_richardson:12_m:none"] = bulk_richardson_number( derived_data["potential_temperature:12_m:K"], 12,
-                                                                         derived_data["mixing_ratio:12_m:g_kg-1"],
-                                                                         derived_data["skin_virtual_potential_temperature:0_m:K"],
-                                                                         derived_data["wind_speed:12_m:m_s-1"])
-    
+    if verbose == 2: print("Bulk Richardson's number")
     derived_data["bulk_richardson:18.4_m:none"]= bulk_richardson_number( derived_data["potential_temperature:18.4_m:K"], 18.4,
                                                                          derived_data["mixing_ratio:18.4_m:g_kg-1"],
                                                                          derived_data["skin_virtual_potential_temperature:0_m:K"],
                                                                          derived_data["wind_speed:18.4_m:m_s-1"])
 
     #
-    # Create rolling average of data columns if requested
+    # Derivatives: (derived_data["Var(z1)"] - derived_data["Var(z2)"]) / (z1 - z2)
+    # z2 is assumed to be 0 : height at surface of water is 0
     #
-    if verbose == 2: print("Create rolling average of data columns if requested")
-    if average_period is not None:
-        derived_data = derived_data.rolling(window=average_period).mean()
-        #derived_data = derived_data.dropna()
+    z1 = 18.4
+    derived_data["dT_dz:18.4_m:K_m-1"]  = (derived_data["temperature:18.4_m:K"] - derived_data["water_sfc_temperature:0_m:K"]) / z1
+    derived_data["dSpeed_dz:18.4_m:s-1"]= derived_data["wind_speed:18.4_m:m_s-1"] / z1
 
     #
-    # Output data
+    # flux components
     #
-    #derived_data = derived_data.dropna()
+    if verbose == 2: print("Raw flux components")
+    derived_data["u_w:18.4_m:m2_s-2"] = raw_data["uw_3D1:18.4_m:m2/s2"]
+    derived_data["v_w:18.4_m:m2_s-2"] = raw_data["vw_3D1:18.4_m:m2/s2"]
+    derived_data["w_T:18.4_m:K_m2_s-2"] = raw_data["wT_3D1:18.4_m:m/s K"]
+
+    #
+    # Momentum Flux & Heat Flux
+    #
+    if verbose == 2: print("Fluxes")
+    derived_data['momentum_flux:18.4_m:m2_s-2'] = raw_data["UpWpBar1_QC"]
+    derived_data['heat_flux:18.4_m:degrees_C_m_s-1'] = raw_data["WpTpBar1_QC"]
+    derived_data['friction_velocity:18.4_m:m_s-1'] = np.sqrt(derived_data['momentum_flux:18.4_m:m2_s-2'])
+    derived_data['temperature_scale:18.4_m:K'] = 0 # put this in 
+
+    #
+    # Add MOST momentum and temp flux from inputs
+    # height, Ri, skinPotT, potT, wspd, waveHt, wavePhaseSpd
+    #
+    derived_data[['MOST_momentum_flux:18.4_m:m2_s-2','MOST_heat_flux:18.4_m:degrees_K_m_s-1']]  = derived_data.apply(
+       # height, Ri, skinPotT, potT, wspd, waveHt, wavePhaseSpd)
+       lambda row: pd.Series(mo.computeMOSTfluxes(18.4, 
+                                                  row['bulk_richardson:18.4_m:none'], 
+                                                  row['skin_virtual_potential_temperature:0_m:K'], 
+                                                  row['potential_temperature:18.4_m:K'],
+                                                  row['wind_speed:18.4_m:m_s-1'],
+                                                  row['wave_height:0_m:m'],
+                                                  row['wave_phase_speed:0_m:m_s-1'])), axis=1) 
+    
+
+    #
+    # derived_data = derived_data.dropna()
+    #
     if verbose == 2: print("Output data")
     derived_data.to_csv(out_file, columns=derived_columns, index_label="Time")
 
@@ -586,7 +584,23 @@ def merge_dataframes(df_list):
     test_df = df_list[-1] # The last DataFrame will be the test set
     return train_df, val_df, test_df
 
-def load_derived_data_random_test_train_val(filename, dropna=False, filter_counter_gradient=False, devVar=None, N=10, k=0, scramble=False):
+
+def merge_dataframes_final_model(df_list):
+    # Check if the list contains at least 10 DataFrames
+    if len(df_list) < 10: raise ValueError("df_list must contain at least 10 DataFrames")
+
+    # Concatenate the first 9 DataFrames for training
+    train_df = pd.concat(df_list[:9], ignore_index=True)
+    
+    # The last DataFrame will be the validation set
+    val_df = df_list[9]
+    
+    # Create an empty DataFrame for the test set
+    test_df = pd.DataFrame()
+    
+    return train_df, val_df, test_df
+
+def load_derived_data_random_test_train_val(filename, dropna=False, filter_counter_gradient=False, devVar=None, N=10, k=0, scramble=False, holdout_ratio=None):
     """
     Load derived data file, remove NaN events, and split the data into training and test sets.
 
@@ -643,22 +657,35 @@ def load_derived_data_random_test_train_val(filename, dropna=False, filter_count
     
     data["test"] = all_data.loc[all_data.index.isocalendar().week.isin(testWeeks)]
     data["validate"] = all_data.loc[all_data.index.isocalendar().week.isin(validateWeeks)]
-
-    # a = data["test"].index
-    # b = data["validate"].index
-    # Concatenate arrays 
-    # c = pd.concat([pd.Series(a), pd.Series(b)])
-    # data["train"] = all_data.loc[all_data.index.difference(c)]
     data["train"] = all_data.loc[all_data.index.difference(pd.concat([pd.Series(data["test"].index), 
                                                                         pd.Series(data["validate"].index)]))]
 
     if scramble == True:
         all_data = shuffle(all_data, random_state=42)
 
+    if holdout_ratio != None:
+        # Calculate holdout set size
+        holdout_size = int(len(all_data) * holdout_ratio)
+        data["holdout"] = all_data.iloc[:holdout_size]
+        print("data holdout",len(data['holdout']))
+        print(f'data all {len(all_data)}')
+
+        # Remaining Data
+        all_data = all_data.iloc[holdout_size:]
+
+        # Save holdout set to CSV
+        data["holdout"].to_csv("mvco_mlsl_holdout.csv", na_rep='?')
+
     if devVar == "kfold":
         df_list = split_dataframe(all_data, N)              # into N smaller DataFrames
         df_list = shift_df_list(df_list, k)                 # shift df's in list to get the correct kfold
         train, validate, test = merge_dataframes(df_list)   # remerge the training and return
+        data = {'train': train, 'validate': validate, 'test': test} # create dictionary to return
+
+    if devVar == "kfold_final_model": # leave test set empty 
+        df_list = split_dataframe(all_data, N)              # into N smaller DataFrames
+        df_list = shift_df_list(df_list, k)                 # shift df's in list to get the correct kfold
+        train, validate, test = merge_dataframes_final_model(df_list)   # remerge the training and return
         data = {'train': train, 'validate': validate, 'test': test} # create dictionary to return
 
     # train.to_csv("../hector/mvco_train_qc.csv", na_rep = '?')

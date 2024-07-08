@@ -1,16 +1,12 @@
 import pandas as pd
 import numpy as np
-# import matplotlib as plt
 import matplotlib.pyplot as plt
-
 from scipy.stats import gaussian_kde
-
 import plotly
 import chart_studio.plotly as py
 from plotly.graph_objs import Scatter, Layout
 import plotly.graph_objs as go
 from  plotly.graph_objs import *
-
 import os
 
 from pathlib import Path
@@ -89,7 +85,7 @@ def draw_hf(df, show=False, save=True, save_path=None):
     if save and save_path==None: 
         print('Error, save_path is None, cannot save files') 
         return
-    #   
+    #
     # Create some scatter plots for quick visual comparison of ML models and also MOST calcs
     #
 
@@ -131,7 +127,6 @@ def draw_hf(df, show=False, save=True, save_path=None):
     if save: plt.savefig(save_path + '.png', format='png')
 
 
-
 def drawTimeSeries(ax, predictions, exact_predictand, predictand, model_type="neural_network", colorPred='orange'):
     x = predictions['Time']
 
@@ -169,6 +164,7 @@ def draw_group_time_series(df,ex_pred,pred, show=False, save=True, save_path=Non
         drawTimeSeries(ax, p, ep, pr, model_type=mt, colorPred=c)
 
     fig.tight_layout()
+    
     if show: plt.show()
     if save: plt.savefig(save_path + '.eps', format='eps')
     if save: plt.savefig(save_path + '.png', format='png')
