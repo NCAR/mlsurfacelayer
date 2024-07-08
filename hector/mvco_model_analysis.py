@@ -1,22 +1,14 @@
 
 import pandas as pd
 import numpy as np
-# import matplotlib as plt
 import matplotlib.pyplot as plt
-
 from scipy.stats import gaussian_kde
-
 import plotly
 import chart_studio.plotly as py
 from plotly.graph_objs import Scatter, Layout
 import plotly.graph_objs as go
 from  plotly.graph_objs import *
-
 import os
-
-
-
-
 
 def draw_loss(cut, direc):
     model_types = [predictand1, predictand2]
@@ -34,7 +26,6 @@ def draw_loss(cut, direc):
         ax[i].legend(fontsize=22)
 
     plt.show()
-
 
 def draw_mf(df):
     #
@@ -91,7 +82,6 @@ def draw_mf(df):
         ax[i].set_xlim(-2.5,1)
         ax[i].set_ylim(-2.5,1)
 
-
 def draw_hf(df):
     #
     # Create some scatter plots for quick visual comparison of ML models and also MOST calcs
@@ -145,7 +135,6 @@ def draw_hf(df):
         # ax[i].set_xlim(-.2,.2)
         # ax[i].set_ylim(-1000,1000)
 
-
 def drawTimeSeries(ax, predictions, exact_predictand, predictand, model_type="neural_network", colorPred='orange'):
     
    
@@ -167,7 +156,6 @@ def drawTimeSeries(ax, predictions, exact_predictand, predictand, model_type="ne
 
     return ax
 
-
 def draw_group_time_series(df,ex_pred,pred):
     plot_obs = [
         (df, ex_pred, pred, 'neural_network', 'purple'),
@@ -185,18 +173,11 @@ def draw_group_time_series(df,ex_pred,pred):
     fig.tight_layout()
     plt.show()
 
-
-
 if __name__ == "__main__":
-    import os
+    main_folder = '../hector' # Path to the main folder
+    model_folders = [] # List to store sub-folders starting with 'model'
 
-    # Path to the main folder
-    main_folder = '../hector'
-
-    # List to store subfolders starting with 'model'
-    model_folders = []
-
-    # Traverse the main folder
+    # Traverse through the main folder
     for subdir in os.listdir(main_folder):
         subdir_path = os.path.join(main_folder, subdir)
         if os.path.isdir(subdir_path) and subdir.startswith('model'):

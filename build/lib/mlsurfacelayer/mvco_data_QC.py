@@ -257,14 +257,6 @@ def process_mvco_data(csv_path, out_file, nan_column="", mvco_lon=-70.544, mvco_
     derived_data["wind_speed:18.4_m:m_s-1"] = np.sqrt(derived_data['u_wind:18.4_m:m_s-1']**2 + derived_data['v_wind:18.4_m:m_s-1']**2)
 
 
-    # derived_data["dt/dz"] = (derived_data["Var(z1)"] - derived_data["Var(z2)"]) / (z1 - z2)
-    # z2 is assumed to be 0 : height at surface of water is 0
-    z1 = 18.4
-    derived_data["dt_dz"]  = (derived_data["temperature:18.4_m:K"] - derived_data["water_sfc_temperature:0_m:K"]) / z1
-    derived_data["dSpeed_dz"]= derived_data["wind_speed:18.4_m:m_s-1"] / z1
-    derived_data["du_dz"]  = derived_data["u_wind:18.4_m:m_s-1"] / z1
-    derived_data["dv_dz"]  = derived_data["v_wind:18.4_m:m_s-1"] / z1
-
 
     derived_data["angle_between_wind_wave:0_m:degrees"] = 180/np.pi * np.arccos((derived_data["u_wave:0_m:m_s-1"] * derived_data["u_wind:18.4_m:m_s-1"] + derived_data["v_wave:0_m:m_s-1"] * derived_data["v_wind:18.4_m:m_s-1"])/(derived_data["wave_phase_speed:0_m:m_s-1"] * derived_data["wind_speed:18.4_m:m_s-1"]))
 
@@ -326,6 +318,19 @@ def process_mvco_data(csv_path, out_file, nan_column="", mvco_lon=-70.544, mvco_
     derived_data["temperature_std:12_m:K"] =  raw_data["air_temp_std:12_m:C"]
     # derived_data["temperature:18.4_m:K"] =  celsius_to_kelvin(raw_data["air_temp_speed_of_sound_3D1:18.4_m:C"])
     derived_data["temperature2:18.4_m:K"] =  celsius_to_kelvin(raw_data["air_temp_speed_of_sound_3D1_2:18.4_m:C"])
+
+
+
+    # derived_data["dt/dz"] = (derived_data["Var(z1)"] - derived_data["Var(z2)"]) / (z1 - z2)
+    # z2 is assumed to be 0 : height at surface of water is 0
+    if verbose == 2: print('NEW DERIVATIVE VARS')
+    z1 = float(18.4)
+    derived_data["dTempd_dz"]  = (derived_data["temperature:18.4_m:K"] - derived_data["water_sfc_temperature:0_m:K"]) / z1
+    derived_data["dSpeed_dz"]= derived_data["wind_speed:18.4_m:m_s-1"] / z1
+    # derived_data["du_dz"]  = derived_data["u_wind:18.4_m:m_s-1"] / z1 # was told in mlsl meeting not to use u or v and only use speed and direction sin & cos
+    # derived_data["dv_dz"]  = derived_data["v_wind:18.4_m:m_s-1"] / z1 
+
+
 
     #
     # flux components
