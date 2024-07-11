@@ -427,6 +427,7 @@ def mo_fluxes(ustar,L,sfcTemp):
 
 def computeMOSTfluxes(height, Ri, skinPotT, potT, wspd, waveHt, wavePhaseSpd):
 
+   #print(height, " ", Ri, " ", skinPotT, " ", wspd, " ", waveHt, " ", wavePhaseSpd)
    if any(pd.isna(value) for value in [Ri, skinPotT, potT, wspd, waveHt, wavePhaseSpd]):
       return np.nan,np.nan
 
@@ -471,7 +472,7 @@ def computeMOSTfluxes(height, Ri, skinPotT, potT, wspd, waveHt, wavePhaseSpd):
       # ignore invalid inputs to even roots
       with np.errstate(invalid='ignore'):
          F[0] = ustar/k * (np.log(height /(waveHt*3.35*(ustar/wavePhaseSpd)**3.4) ) - psi_m(height,L)) - wspd
-         F[1] = skinPotT + (ustar**2 )*skinPotT/(k*g*L) * (np.log(height /(waveHt*3.35*(ustar/wavePhaseSpd)**3.4)) - psi_h(height,L)) - potT18
+         F[1] = skinPotT + (ustar**2 )*skinPotT/(k*g*L) * (np.log(height /(waveHt*3.35*(ustar/wavePhaseSpd)**3.4)) - psi_h(height,L)) - potT
       return F
 
    count = 0
@@ -490,6 +491,6 @@ def computeMOSTfluxes(height, Ri, skinPotT, potT, wspd, waveHt, wavePhaseSpd):
    # note that z[0] is ustar and z[1] is obukhov length L
    #
    momentum_flux , heat_flux = mo_fluxes(z[0],z[1], skinPotT)
-
+   #print( "mf, hf: ", momentum_flux, " ", heat_flux)
    return momentum_flux, heat_flux
 

@@ -1,0 +1,11 @@
+unset CUDNN_PATH
+unset TENSORRT_PATH
+unset XLA_FLAGS
+
+export LD_LIBRARY_PATH=${OLD_LD_LIBRARY_PATH}
+unset OLD_LD_LIBRARY_PATH
+
+unset OMPI_MCA_opal_cuda_support
+
+unset TF_GPU_THREAD_MODE
+unset TF_GPU_THREAD_COUNT

@@ -10,11 +10,7 @@ from mlsurfacelayer.mvco_data_QC import load_derived_data_random_test_train_val
 from mlsurfacelayer.models import save_random_forest_csv, save_scaler_csv
 from mlsurfacelayer.mo import * 
 
-from mlsurfacelayer.mo import mo_similarity_offshore_branko
-from mlsurfacelayer.mo import mo_similarity_offshore_alternate
-from mlsurfacelayer.mo import mo_fluxes_branko
-from mlsurfacelayer.mo import mo_fluxes_alternate
-
+from mlsurfacelayer.mo import computeMOSTfluxes
 
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.preprocessing import StandardScaler
@@ -116,7 +112,11 @@ def main():
                                                     N=config['k_fold_cross_validation']['N'],
                                                     k=config['k_fold_cross_validation']['k'],
                                                     holdout_ratio=config['k_fold_cross_validation']['holdout_ratio'],
-                                                    scramble=config['k_fold_cross_validation']['scramble'])
+                                                    scramble=config['k_fold_cross_validation']['scramble'])#,
+ 
+     
+
+    #drop_nan=config['input_columns'][0]) # this 0 is assuming the mf & hf models have the same input
 
     # tempdf = data['test']
     # data['test'] = data['validate']
@@ -153,7 +153,13 @@ def main():
     # Copy in the derived data columns from the test dataset
     #
     print( "predictions index: ", len(model_predictions.index), " data[test].index:",  len(data["test"].index))
-    model_predictions.loc[:, derived_columns] = data["test"][derived_columns]
+    
+
+    print(data["test"].columns)
+    print(derived_columns)
+
+    tempvar = data["test"][derived_columns]
+    model_predictions.loc[:, derived_columns] = tempvar
 
     #
     # Create a data frame with predictands as index and columns
@@ -175,63 +181,63 @@ def main():
         yaml.dump(config, file) 
 
     ''' ---------------------------------------------- Calculate the predictands using MOST ---------------------------------------------- '''
-    
-    print("Monin Obukhov estimations of predictands:")
-
-    #
-    # Loop through the test data samples and call the monin obukhov code with
-    # predictors needed for the calculation
-    #
-    for d, date in enumerate(data["test"].index):
-        if d % 1000 == 0: print('computing MOST: ',d,date)
-        mo_out = mo_fluxes_branko(data["test"].loc[date, "bulk_richardson:18.4_m:none"].astype(float), #mix of both qc and non-qc variables
-                                    data["test"].loc[date, "skin_virtual_potential_temperature:0_m:K"].astype(float), #qc
-                                    data["test"].loc[date, "water_sfc_temperature:0_m:K"].astype(float), #qc
-                                    data["test"].loc[date, "wind_speed:18.4_m:m_s-1"].astype(float), #non-qc
-                                    data["test"].loc[date, "wave_height:0_m:m"].astype(float), #non-qc
-                                    data["test"].loc[date, "potential_temperature:18.4_m:K"].astype(float), #qc
-                                    data["test"].loc[date, "wave_phase_speed:0_m:m_s-1"].astype(float), #non-qc
-                                    18.4)
-        # print('mo_branko', mo_out)
-        model_predictions.loc[date, "momentum_flux-mo"] = mo_out[0]
-        model_predictions.loc[date, "heat_flux-mo"] = mo_out[1]
-        # model_predictions.loc[date, "kin_heat_flux-mo_branko"] = mo_out[0]*mo_out[1] 
-    
-    #
-    # Compute the error in the MOST estimations of the predictands 
-    # and fill in the model_metrics dataframe with the results
-    # 
-    for output_type in output_types:
-        #
-        # Get the predictand label used in the model_metrics dataframe
-        #
-        mo_predictand_label = output_type + "-" + "mo"
-        # mo_predictand_label = output_type + "-" + "mo_branko"
-        # mo_predictand_label2 = output_type + "-" + "mo_alternate"
-        # mo_predictand_label = output_type
-        print( "label", mo_predictand_label)
-
-        #
-        # Compute the different error metrics for each mo estimated predictand 
-        #
-        for model_metric in model_metric_types:
-            # Ensure there are no NaNs in your predictions
-            valid_indices = ~np.isnan(data["test"][output_columns[output_type]].values) & ~np.isnan(model_predictions[mo_predictand_label].values)
-
-            print('length of most comps valid cases (success converging)')
-            print(len(valid_indices))
-
-            #
-            # Execute the metric function and for this mo index label and metric column
-            # fill in the model_metrics data frame  
-            #
-            model_metrics.loc[mo_predictand_label,model_metric] = metrics[model_metric](data["test"][output_columns[output_type]].values[valid_indices], model_predictions[mo_predictand_label].values[valid_indices])
-            #
-            # Output results
-            #
-            print(f"{mo_predictand_label:30s} {model_metric:20s}: {model_metrics.loc[mo_predictand_label, model_metric]:.15f}")
-
-    
+#    
+#    print("Monin Obukhov estimations of predictands:")
+#
+#    #
+#    # Loop through the test data samples and call the monin obukhov code with
+#    # predictors needed for the calculation
+#    #
+#    for d, date in enumerate(data["test"].index):
+#        if d % 1000 == 0: print('computing MOST: ',d,date)
+#        mo_out = computeMOSTfluxes(data["test"].loc[date, "bulk_richardson:18.4_m:none"].astype(float), #mix of both qc and non-qc variables
+#                                    data["test"].loc[date, "skin_virtual_potential_temperature:0_m:K"].astype(float), #qc
+#                                    data["test"].loc[date, "water_sfc_temperature:0_m:K"].astype(float), #qc
+#                                    data["test"].loc[date, "wind_speed:18.4_m:m_s-1"].astype(float), #non-qc
+#                                    data["test"].loc[date, "wave_height:0_m:m"].astype(float), #non-qc
+#                                    data["test"].loc[date, "potential_temperature:18.4_m:K"].astype(float), #qc
+#                                    data["test"].loc[date, "wave_phase_speed:0_m:m_s-1"].astype(float), #non-qc
+#                                    18.4)
+#        # print('mo_branko', mo_out)
+#        model_predictions.loc[date, "momentum_flux-mo"] = mo_out[0]
+#        model_predictions.loc[date, "heat_flux-mo"] = mo_out[1]
+#        # model_predictions.loc[date, "kin_heat_flux-mo_branko"] = mo_out[0]*mo_out[1] 
+#    
+#    #
+#    # Compute the error in the MOST estimations of the predictands 
+#    # and fill in the model_metrics dataframe with the results
+#    # 
+#    for output_type in output_types:
+#        #
+#        # Get the predictand label used in the model_metrics dataframe
+#        #
+#        mo_predictand_label = output_type + "-" + "mo"
+#        # mo_predictand_label = output_type + "-" + "mo_branko"
+#        # mo_predictand_label2 = output_type + "-" + "mo_alternate"
+#        # mo_predictand_label = output_type
+#        print( "label", mo_predictand_label)
+#
+#        #
+#        # Compute the different error metrics for each mo estimated predictand 
+#        #
+#        for model_metric in model_metric_types:
+#            # Ensure there are no NaNs in your predictions
+#            valid_indices = ~np.isnan(data["test"][output_columns[output_type]].values) & ~np.isnan(model_predictions[mo_predictand_label].values)
+#
+#            print('length of most comps valid cases (success converging)')
+#            print(len(valid_indices))
+#
+#            #
+#            # Execute the metric function and for this mo index label and metric column
+#            # fill in the model_metrics data frame  
+#            #
+#            model_metrics.loc[mo_predictand_label,model_metric] = metrics[model_metric](data["test"][output_columns[output_type]].values[valid_indices], model_predictions[mo_predictand_label].values[valid_indices])
+#            #
+#            # Output results
+#            #
+#            print(f"{mo_predictand_label:30s} {model_metric:20s}: {model_metrics.loc[mo_predictand_label, model_metric]:.15f}")
+#
+#    
     ''' ------------------------------------------- END of Calculate the predictands using MOST ------------------------------------------ '''
     
 
@@ -260,11 +266,6 @@ def main():
     # print("mo_branko friction vel", model_predictions['friction_velocity-mo_branko'])
     # print("mo_alternate friction vel", model_predictions['friction_velocity-mo_alternate'])
     print(model_predictions.columns)
-    print("mo_branko momentum flux ",model_predictions['momentum_flux-mo_branko'])
-    print("mo_alternate momentum flux ",model_predictions['momentum_flux-mo_alternate'])
-
-    print("mo_branko heat flux ",model_predictions['heat_flux-mo_branko'])
-    print("mo_alternate heat flux ",model_predictions['heat_flux-mo_alternate'])
 
     for output_type in output_types:
         print("\n\n")

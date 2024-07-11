@@ -1,0 +1,35 @@
+20 % fail out of total
+unstable systems:  88548  % convergence:  0.99 : first guess : u* = 0.1, L = -1.0
+stable   systems:  40730  % convergence:  0.38 : first guess : u* = 0.1, L = 100
+
+27 % fail out of total
+unstable systems:  88548  % convergence:  0.99 : first guess : u* = 0.1, L = -1.0
+stable   systems:  40730  % convergence:  0.14 : first guess : u* = 1.0, L = 100
+
+10.5% fail out of total
+unstable systems:  88548  % convergence:  0.99 : first guess : u* = 0.1, L = -1.0
+stable   systems:  40730  % convergence:  0.67 : first guess : u* = 0.1, L = -100
+
+27 % fail out of total
+unstable systems:  88548  % convergence:  0.99 : first guess : u* = 0.1, L = -1.0
+stable   systems:  40730  % convergence:  0.149: first guess : u* = 1.0, L = -100
+
+14 % fail out of total
+unstable systems:  88548  % convergence:  0.99 : first guess : u* = 0.1, L = -1.0
+stable   systems:  40730  % convergence:  0.56 : first guess : u* = 0.5, L = -100
+
+10.8 % fail out of total
+unstable systems:  88548  % convergence:  0.99 : first guess : u* = 0.1, L = -1.0
+stable   systems:  40730  % convergence:  0.66 : first guess : u* = 0.1, L = -50
+
+10.2 % fail out of total
+unstable systems:  88548  % convergence:  0.99 : first guess : u* = 0.1, L = -1.0
+stable   systems:  40730  % convergence:  0.68 : first guess : u* = 0.05, L = -100
+
+10.8 % fail out of total
+unstable systems:  88548  % convergence:  0.99 : first guess : u* = 0.1, L = -1.0
+stable   systems:  40730  % convergence:  0.66 : first guess : u* = 0.05, L = -50
+
+19.4 % fail out of total
+unstable systems:  88548  % convergence:  0.99 : first guess : u* = 0.1, L = -1.0
+stable   systems:  40730  % convergence:  0.39 : first guess : u* = 0.05, L = 100
