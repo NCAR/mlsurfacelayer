@@ -15,21 +15,21 @@ def create_kfold_yamls():
 
     name = config['file_name'] # hold the current name temporarily
     
-    prefix = '../../data/model_output/' + name + '/'              # prefix to save all Kfold YAML's in same sub-folder
-    Path(prefix).mkdir(parents=True, exist_ok=True) # create sub-folder to hold the Kfold YAML's
-
     out_dir = config['out_dir'] # hold the ouput directory name temporarily
+    Path(f'{out_dir}{name}/').mkdir(parents=True, exist_ok=True) # create sub-folder to hold the Kfold YAML's
+    
     folds = config['k_fold_cross_validation']['N'] # retrieve number of Kfolds for this model
 
     for i in range(folds):
         # rename vars
         config['k_fold_cross_validation']['k'] = i
-        config['file_name'] = name + '--kfold-' + str(i)
-        config['out_dir'] = out_dir + 'model_QC_' + '--kfold-' + str(i)
+        config['file_name'] = f'{name}--kfold-{str(i)}'
+        # config['out_dir'] = f'{out_dir}{name}/{name}/model_QC_--kfold-{str(i)}'
+        config['out_dir'] = f'{out_dir}{name}/model_QC_--kfold-{str(i)}'
 
         # Save to a new YAML file
         #with open(out_dir + config['file_name'] + '.yml', 'w') as file:
-        with open(prefix + config['file_name'] + '.yml', 'w') as file:
+        with open(f"{out_dir}{name}/{config['file_name']}.yml", 'w') as file:
             yaml.dump(config, file)
 
 if __name__ == '__main__':

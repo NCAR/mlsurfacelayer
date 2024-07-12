@@ -41,7 +41,7 @@ class DenseNeuralNetwork(object):
                  output_activation="linear", optimizer="adam", loss="mse", use_noise=False, noise_sd=0.01,
                  lr=0.001, use_dropout=False, dropout_alpha=0.1, batch_size=128, epochs=2,
                  l2_weight=0.01, sgd_momentum=0.9, adam_beta_1=0.9, adam_beta_2=0.999, decay=0, verbose=0,
-                 classifier=False, min_delta=0, patience=0):
+                 classifier=False, min_delta=0, patience=0, early_stop=True):
         self.hidden_layers = hidden_layers
         self.hidden_neurons = hidden_neurons
         self.activation = activation
@@ -69,6 +69,7 @@ class DenseNeuralNetwork(object):
 
         self.min_delta = min_delta
         self.patience = patience
+        self.early_stop = early_stop
 
     def build_neural_network(self, inputs, outputs):
         """
@@ -123,7 +124,8 @@ class DenseNeuralNetwork(object):
         if self.classifier:
             outputs = np.unique(y).size
         self.build_neural_network(inputs, outputs)
-        if self.classifier:
+        
+        if self.classifier and self.early_stop:
             self.y_labels = np.unique(y)
 
             y_class = np.zeros((y.shape[0], self.y_labels.size), dtype=np.int32)
@@ -141,13 +143,37 @@ class DenseNeuralNetwork(object):
                                      epochs=self.epochs, 
                                      verbose=self.verbose,
                                      callbacks=[earlyStop])
-        else:
+        elif self.early_stop:
             history = self.model.original_fit(x, y, 
                                      validation_data=(x_val, y_val),
                                      batch_size=self.batch_size, 
                                      epochs=self.epochs, 
                                      verbose=self.verbose,
                                      callbacks=[earlyStop])
+        elif self.classifier:
+            self.y_labels = np.unique(y)
+
+            y_class = np.zeros((y.shape[0], self.y_labels.size), dtype=np.int32)
+            for l, label in enumerate(self.y_labels):
+                y_class[y == label, l] = 1
+
+            y_val_class = np.zeros((y_val.shape[0], self.y_labels.size), dtype=np.int32)
+            for l, label in enumerate(self.y_labels):
+                y_val_class[y_val == label, l] = 1
+            
+
+            history = self.model.original_fit(x, y_class, 
+                                     validation_data=(x_val, y_val_class), # this should work, has not been tested/confirmed that its working
+                                     batch_size=self.batch_size, 
+                                     epochs=self.epochs, 
+                                     verbose=self.verbose)
+
+        else:
+            history = self.model.original_fit(x, y, 
+                                     validation_data=(x_val, y_val),
+                                     batch_size=self.batch_size, 
+                                     epochs=self.epochs, 
+                                     verbose=self.verbose)
         return history
 
     def save_fortran_model(self, filename):

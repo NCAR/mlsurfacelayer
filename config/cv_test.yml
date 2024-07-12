@@ -61,7 +61,7 @@ input_columns:
 ]
 output_columns:
   momentum_flux: "momentum_flux:18.4_m:m2_s-2" # mf units
-  heat_flux: "heat_flux:18.4_m:degrees_K_m_s-1" # hf units
+  heat_flux: "heat_flux:18.4_m:degrees_C_m_s-1" # hf units
   
 derived_columns: [
 # "TempScaleMOST", 
@@ -124,7 +124,7 @@ k_fold_cross_validation:
   N: 3
   k: 0
   holdout_ratio: 0.1
-  scramble: True
+  scramble: False
 
 model_config:
   random_forest:

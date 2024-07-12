@@ -113,8 +113,8 @@ def main():
                                                     k=config['k_fold_cross_validation']['k'],
                                                     holdout_ratio=config['k_fold_cross_validation']['holdout_ratio'],
                                                     scramble=config['k_fold_cross_validation']['scramble'])#,
- 
-     
+    for a in data:
+        data[a]['momentum_flux:18.4_m:m2_s-2'] = data[a]['momentum_flux:18.4_m:m2_s-2'].replace(-0.0, 0)
 
     #drop_nan=config['input_columns'][0]) # this 0 is assuming the mf & hf models have the same input
 
@@ -270,6 +270,7 @@ def main():
     for output_type in output_types:
         print("\n\n")
         print("Predictand: " ,output_columns[output_type])
+
         print("train predictors shape: ",data["train"][input_columns[output_type]].shape)
         print("train predictand shape: ",data["train"][output_columns[output_type]].shape)
         print("test predictand shape: ", data["test"][output_columns[output_type]].shape)

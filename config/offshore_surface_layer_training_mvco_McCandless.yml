@@ -3,7 +3,7 @@
 #
 file_name: "offshore_surface_layer_training_mvco_McCandless"
 data_file: "../../data/mvco_mlsl_qc.csv"
-out_dir: "../../data/model_output/model_QC_McCandless_"
+out_dir: "../../data/model_output/offshore_surface_layer_training_mvco_McCandless/"
 filter_counter_gradient: 0
 train_test_split_date: "2010-10-01"
 #output_types: ['friction_velocity', 'temp_scale', 'heat_flux']
@@ -61,7 +61,7 @@ input_columns:
 ]
 output_columns:
   momentum_flux: "momentum_flux:18.4_m:m2_s-2" # mf units
-  heat_flux: "heat_flux:18.4_m:degrees_K_m_s-1" # hf units
+  heat_flux: "heat_flux:18.4_m:degrees_C_m_s-1" # hf units
   
 derived_columns: [
 # "TempScaleMOST", 
@@ -133,8 +133,7 @@ model_config:
     n_jobs: 4
     max_leaf_nodes: 1024
   neural_network:
-    # hidden_layers: 5 
-    hidden_layers: 1 
+    hidden_layers: 2
     hidden_neurons: 128 
     batch_size: 128
     epochs:  2000

@@ -1,9 +1,9 @@
 #
 #
 #
-file_name: "offshore_surface_layer_training_mvco_scramble"
-data_file: "../hector/mvco_mlsl_qc.csv"
-out_dir: "../hector/model/exp_scramble/"
+file_name: "offshore_surface_layer_training_mvco_noES"
+data_file: "../../data/mvco_mlsl_qc.csv"
+out_dir: "../../data/model_output/offshore_surface_layer_training_mvco_noES/"
 filter_counter_gradient: 0
 train_test_split_date: "2010-10-01"
 #output_types: ['friction_velocity', 'temp_scale', 'heat_flux']
@@ -104,10 +104,17 @@ derived_columns: [
 #'temperature_scale:18.4_m:K'
 
 # added derivative below
-"dt/dz",
-"Speed/z",
-"du/dz", # 'U/z' 
-"dv/dz" # 'V/z' 
+"dT_dz:18.4_m:K_m-1",
+"dSpeed_dz:18.4_m:s-1",
+#"du/dz", # 'U/z' 
+#"dv/dz" # 'V/z' 
+
+"MOST_momentum_flux:18.4_m:m2_s-2",
+"MOST_heat_flux:18.4_m:degrees_K_m_s-1",
+"MOST_chopped_momentum_flux:18.4_m:m2_s-2",
+"MOST_chopped_heat_flux:18.4_m:degrees_K_m_s-1",
+"MOST_rounded_momentum_flux:18.4_m:m2_s-2",
+"MOST_rounded_heat_flux:18.4_m:degrees_K_m_s-1"
 ]
 # stability_column: "bulk_richardson:12_m:none"
 stability_column: "bulk_richardson:18.4_m:none"
@@ -116,7 +123,8 @@ k_fold_cross_validation:
   devVar: 'kfold'
   N: 10
   k: 0
-  scramble: True
+  holdout_ratio: 0.1
+  scramble: False
 
 model_config:
   random_forest:
@@ -124,14 +132,14 @@ model_config:
     max_features: 10 
     n_jobs: 4
     max_leaf_nodes: 1024
-  neural_network:
-    # hidden_layers: 5 
-    hidden_layers: 1 
+  neural_network: 
+    hidden_layers: 5
     hidden_neurons: 64 
     batch_size: 32
-    epochs:  1000
+    epochs:  100
     lr: 0.001
     activation: tanh
     l2_weight: 0.0
-    min_delta: 0
-    patience: 50
+    min_delta: 0.01
+    patience: 25
+    early_stop: False

@@ -119,7 +119,7 @@ def process_mvco_data(csv_path, out_file, nan_column="", mvco_lon=-70.544, mvco_
                        "u_w:18.4_m:m2_s-2",
                        "v_w:18.4_m:m2_s-2",
                        "T_w:18.4_m:C_m_s-2",
-                       "heat_flux:18.4_m:degrees_K_m_s-1",
+                       "heat_flux:18.4_m:degrees_C_m_s-1",
                        "momentum_flux:18.4_m:m2_s-2",
                        "friction_velocity:18.4_m:m_s-1",
                        "temperature_scale:18.4_m:K",
@@ -265,7 +265,7 @@ def process_mvco_data(csv_path, out_file, nan_column="", mvco_lon=-70.544, mvco_
     #
     if verbose == 2: print("Fluxes")
     derived_data['momentum_flux:18.4_m:m2_s-2'] = raw_data["UpWpBar1_QC"]
-    derived_data['heat_flux:18.4_m:degrees_K_m_s-1'] = celsius_to_kelvin(raw_data["WpTpBar1_QC"])
+    derived_data['heat_flux:18.4_m:degrees_C_m_s-1'] = raw_data["WpTpBar1_QC"]
     derived_data['friction_velocity:18.4_m:m_s-1'] = np.sqrt(derived_data['momentum_flux:18.4_m:m2_s-2'])
     derived_data['temperature_scale:18.4_m:K'] = 0 # put this in 
 
@@ -434,9 +434,18 @@ def shift_df_list(df_list, k):
     return df_list[-k:] + df_list[:-k]
 
 def merge_dataframes(df_list):    
+    # train_df = pd.concat(df_list[:-2], ignore_index=True) # Merge all but the last 2 DataFrames
     train_df = pd.concat(df_list[:-2], ignore_index=True) # Merge all but the last 2 DataFrames
-    val_df = df_list[-2] # The second to last DataFrame will be the validation set
-    test_df = df_list[-1] # The last DataFrame will be the test set
+    # val_df = df_list[-2] # The second to last DataFrame will be the validation set
+    # test_df = df_list[-1] # The last DataFrame will be the test set
+    val_df = df_list[-2].reset_index(drop=True) # The second to last DataFrame will be the validation set
+    test_df = df_list[-1].reset_index(drop=True) # The last DataFrame will be the test set
+    return train_df, val_df, test_df
+
+def merge_dataframes_final_model(df_list):    
+    train_df = pd.concat(df_list[:-1], ignore_index=True) # Merge all but the last 2 DataFrames
+    val_df = df_list[-1] # The DataFrame will be the test set
+    test_df = pd.DataFrame() # return Test as empty because this model will be tested on the holdout set
     return train_df, val_df, test_df
 
 def load_derived_data_random_test_train_val(filename, dropna=False, filter_counter_gradient=False, devVar=None, N=10, k=0, scramble=False, holdout_ratio=None):
