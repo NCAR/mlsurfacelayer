@@ -557,7 +557,10 @@ def load_derived_data_random_test_train_val(filename, dropna=False, filter_count
     # validate.to_csv("../hector/mvco_validate_qc.csv", na_rep = '?')
     # test.to_csv("../hector/mvco_test_qc.csv", na_rep = '?')
 
-    print("data loaded")
+    if devVar == 'kfold':
+        print(f"data loaded, fold number: {k}")    
+    else:
+        print("data loaded")
     return data
 
 

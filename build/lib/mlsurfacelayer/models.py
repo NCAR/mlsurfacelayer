@@ -165,14 +165,14 @@ class DenseNeuralNetwork(object):
             history = self.model.original_fit(x, y_class, 
                                      validation_data=(x_val, y_val_class), # this should work, has not been tested/confirmed that its working
                                      batch_size=self.batch_size, 
-                                     epochs=self.epochs, 
+                                     epochs=100, 
                                      verbose=self.verbose)
 
         else:
             history = self.model.original_fit(x, y, 
                                      validation_data=(x_val, y_val),
                                      batch_size=self.batch_size, 
-                                     epochs=self.epochs, 
+                                     epochs=100, 
                                      verbose=self.verbose)
         return history
 
