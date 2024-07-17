@@ -1,0 +1,22 @@
+creating sub YAML's
+Timing train_offshore_models_mvco.py for kfold 0
+Timing o_mvco_model_analysis.py for kfold 0
+Timing train_offshore_models_mvco.py for kfold 1
+Timing o_mvco_model_analysis.py for kfold 1
+Timing train_offshore_models_mvco.py for kfold 2
+Timing o_mvco_model_analysis.py for kfold 2
+Timing train_offshore_models_mvco.py for kfold 3
+Timing o_mvco_model_analysis.py for kfold 3
+Timing train_offshore_models_mvco.py for kfold 4
+Timing o_mvco_model_analysis.py for kfold 4
+Timing train_offshore_models_mvco.py for kfold 5
+Timing o_mvco_model_analysis.py for kfold 5
+Timing train_offshore_models_mvco.py for kfold 6
+Timing o_mvco_model_analysis.py for kfold 6
+Timing train_offshore_models_mvco.py for kfold 7
+Timing o_mvco_model_analysis.py for kfold 7
+Timing train_offshore_models_mvco.py for kfold 8
+Timing o_mvco_model_analysis.py for kfold 8
+Timing train_offshore_models_mvco.py for kfold 9
+Timing o_mvco_model_analysis.py for kfold 9
+calculating average metrics

@@ -3,7 +3,7 @@
 #
 file_name: "cv_test"
 data_file: "../../data/mvco_mlsl_qc.csv"
-out_dir: "../../data/model_output/cv_test/"
+out_dir: "../../data/model_output/"
 filter_counter_gradient: 0
 train_test_split_date: "2010-10-01"
 #output_types: ['friction_velocity', 'temp_scale', 'heat_flux']
@@ -143,3 +143,4 @@ model_config:
     l2_weight: 0.0
     min_delta: 0.01
     patience: 25
+    early_stop: True

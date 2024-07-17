@@ -1,14 +1,25 @@
 '''make this a markdown file'''
 
 # First we have to clone the repo if we havnt already. 
-#   I suggest creating a folder, for ex: outer, and cloning the repo there: outer/mlsurfacelayer.
 # Here we are also seperating and cloning only the bracnh that we will need/use.
+#   I suggest creating a folder, for ex: outer, and cloning the repo there: outer/mlsurfacelayer.
+#   Please replace `outer` with your specific folder name in the following paths.
 clone git --branch hector --single-branch "https://github.com/NCAR/mlsurfacelayer.git"
 
 # Before we can create a model first we need to create the conda envirment neccesary to use this branch
 #   This will create an envirment named 'ral' at this location 'outer/data/conda-envs/ral'
 cd outer/mlsurfacelayer/summer_work_2024/conda_setup
 sh setup_conda_RAL_env.sh
+
+# On Casper / HPC:
+# Once the env finishes downloading, go to terminal and run these commands
+#   The first will activate conda, the second will load the new env 'ral' so that you can run things in terminal (such as 'run.sh') 
+module load conda
+conda activate ../../data/conda-envs/ral
+
+# Next go into the repo and run this command to install the mlsurfacelayer library that comes with the repo
+cd outer/mlsurfacelayer
+pip install .
 
 # Here is how to run the .sh file on your local machine that will train a model and draw the visuals automatically
     # First we go into the config folder to create the YAML file needed for the experiment.

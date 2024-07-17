@@ -19,6 +19,7 @@ from mlsurfacelayer.metrics import mean_error, hellinger_distance, pearson_r2
 
 from tensorflow.keras.layers import Input
 import pandas as pd
+import os
 
 
 class MyHyperModel(kt.HyperModel):
@@ -28,7 +29,8 @@ class MyHyperModel(kt.HyperModel):
         self.args = args
 
     def build(self, hp):
-        print(f'inside hypermodel build')
+        if self.args.verbose >= 2:
+            print(f'inside hypermodel build')
         # Build and return the model instance
         return build_model(hp, self.config, self.args, self.verbose)
 
@@ -61,7 +63,8 @@ def build_model(hp, config, args, verbose=0):
         model = RandomForestRegressor(**model_config)
     
     elif model_type == "neural_network":
-        print(f'inside build model before load')
+        if args.verbose >= 2:
+            print(f'inside build model before load')
         data = load_derived_data_random_test_train_val(config["data_file"], dropna=True, 
                                                     devVar=config['k_fold_cross_validation']['devVar'],
                                                     N=config['k_fold_cross_validation']['N'],
@@ -81,14 +84,22 @@ def build_model(hp, config, args, verbose=0):
             model_config.update({
                 "verbose": 2
             })
+
         model_config.update({
             # "hidden_layers": hp.Choice('hidden_layers', values=[1, 3, 5]),
-            "lr": hp.Choice('lr', values=[1e-2, 1e-3, 1e-4]),
+            # "lr": hp.Choice('lr', values=[1e-2, 1e-3, 1e-4]),
             # "hidden_neurons": hp.Choice('hidden_neurons', values=[16, 32, 64, 128, 256]),
-            "early_stop": hp.Choice('early_stop', values=[True, False])
+            # "early_stop": hp.Choice('early_stop', values=[True, False])
             # "optimizer": hp.Choice('optimizer', values=['adam', 'sgd']),
             # "loss": hp.Choice('loss', values=['mean_squared_error', 'mean_absolute_error'])
+
+            "hidden_layers": args.combo[0],
+            "lr": args.combo[1],
+            "hidden_neurons": args.combo[2],
+            "early_stop": args.combo[3]
+            
         })
+
         x, y = scaled_train[:, :-1], scaled_train[:, -1]
         inputs = x.shape[1]
         if len(y.shape) == 1:
@@ -107,46 +118,6 @@ def build_model(hp, config, args, verbose=0):
     
     return model
 
-# # Function to perform cross-validation for a single fold
-# def cross_val_fold(args_tuple):
-#     fold, hp, config, model, args, verbose = args_tuple
-#     if args.verbose >= 2:
-#         print(f'Fold number: {fold} in parallel_cross_val_score')
-#     try:
-#         result = cross_val_score(hp, config, model, args, fold, verbose=verbose)
-#         return result
-#     except Exception as e:
-#         # Log the error or handle it as per your requirement
-#         print(f"Error in fold {fold}: {e}")
-#         return None
-
-# # Room here to implement parallelism : of the kfold cross val
-# def parallel_cross_val_score(hp, config, model, args, verbose=0, max_workers=4):
-#     if args.verbose >= 2:
-#         print('Inside parallel_cross_val_score:')
-#     scores = []
-
-#     num_folds = config['k_fold_cross_validation']['N']
-
-#     with mp.Pool(processes=max_workers) as pool:
-#         print(f'brefore pool map')
-#         results = pool.starmap(cross_val_score, [(hp, config, model, args, fold, verbose) for fold in range(num_folds)])
-#         print(f'after pool map')
-#         for result in results:
-#             if result is not None:
-#                 scores.append(result)
-#                 if args.verbose >= 2:
-#                     print(f'Result for fold: {result}')
-
-#     if len(scores) > 0:
-#         if args.verbose >= 2:
-#             print(f'Mean score: {np.mean(scores)}')
-#         return np.mean(scores)
-#     else:
-#         return None
-
-
-
 def parallel_cross_val_score(hp, config, model, args, verbose=0, max_workers=1):
     if args.verbose >= 2: print('Inside parallel_cross_val_score:')
     
@@ -156,28 +127,11 @@ def parallel_cross_val_score(hp, config, model, args, verbose=0, max_workers=1):
         if args.verbose >= 2: print(f'Fold number:{fold} in parallel_cross_val_score')
         score = cross_val_score(hp, config, model, args, fold, verbose=verbose)
         scores.append(score)
-
-
-    
         
-    # # Number of folds
-    # num_folds = config['k_fold_cross_validation']['N']
-    # scores = []
-
-    # # Using multiprocessing.Pool to parallelize cross-validation
-    # with mp.Pool(processes=max_workers) as pool:
-    #     results = pool.starmap(cross_val_score, [(fold, hp, config, model, args, verbose) for fold in range(num_folds)])
-    #     for result in results:
-    #         if result is not None:
-    #             scores.append(result)
-    #             print(result)
-    
     if len(scores) > 0:
         return np.mean(scores)
     else:
         return None  # Handle case where all folds resulted in errors
-
-
 
 # Define the cross-validation function
 def cross_val_score(hp, config, model, args, fold, verbose=0):
@@ -188,7 +142,8 @@ def cross_val_score(hp, config, model, args, fold, verbose=0):
     output_column = config["output_columns"][output_type]
     metric = 'mean_absolute_error'
     
-    print(f'inside cross val score before load')
+    if args.verbose >= 2:
+        print(f'inside cross val score before load')
     data = load_derived_data_random_test_train_val(config["data_file"], dropna=True, 
                                                     devVar=config['k_fold_cross_validation']['devVar'],
                                                     N=config['k_fold_cross_validation']['N'],
@@ -201,7 +156,7 @@ def cross_val_score(hp, config, model, args, fold, verbose=0):
                     data["train"][output_column].values)
 
         pred = model.predict(data["test"][input_column])
-        score = metrics[metric](data["test"][output_column].values, pred)
+        score = args.metrics[metric](data["test"][output_column].values, pred)
 
     elif model_type == "neural_network":
         input_scaler = StandardScaler()
@@ -221,7 +176,7 @@ def cross_val_score(hp, config, model, args, fold, verbose=0):
         pred = model.predict(scaled_test[:, :-1])
         pred = pred * input_scaler.scale_[-1] + input_scaler.mean_[-1]
 
-        score = metrics[metric](data["test"][output_column], pred)
+        score = args.metrics[metric](data["test"][output_column], pred)
     
     if verbose >= 2:
         print(f"Step: Cross Validation")
@@ -235,24 +190,18 @@ def cross_val_score(hp, config, model, args, fold, verbose=0):
     return score
 
 # Define the hyperparameter tuning function
-def hyperparameter_tuning(config, args, verbose=0, type='grid'):
-    # class MyHyperModel(kt.HyperModel):
-    #     def build(self, hp):
-    #         return build_model(hp, config, verbose=verbose)
-
-    #     def fit(self, hp, model, *args, **kwargs):
-    #         scores = []
-    #         with ProcessPoolExecutor(max_workers=args.executions_per_trial) as executor:  # parallelize executions per trial
-    #             futures = [executor.submit(parallel_cross_val_score, hp, config, verbose=verbose) for _ in range(3)]
-    #             for future in as_completed(futures):
-    #                 scores.append(future.result())
-    #         mean_score = np.mean(scores)
-    #         # Return the score as a dictionary with a key matching the objective name
-    #         return {'val_loss': mean_score}
-
+def hyperparameter_tuning(config, args, verbose=0, type='grid', combo=None):
+    if combo == None: 
+        print(f'error combo == {combo}')
+        return
+    else:
+        args.combo = combo
+        args.project_name = args.project_name + '/combo_' + str(combo)
+    
     hypermodel = MyHyperModel(config, args, verbose)
-
-    strategy = keras.distribute.experimental.CentralStorageStrategy()
+    
+    strategy = None
+    # strategy = keras.distribute.experimental.CentralStorageStrategy()
 
     if type == 'grid':
         tuner = kt.tuners.GridSearch(
@@ -275,18 +224,17 @@ def hyperparameter_tuning(config, args, verbose=0, type='grid'):
             project_name=args.project_name,
             distribution_strategy=strategy
         )
-        
-
 
     # Placeholder data required by the search function, it won't be used
     dummy_data = np.zeros((1, 1))
     tuner.search_space_summary()
     tuner.search(dummy_data, dummy_data)
 
+    save_trial_results(tuner, args)
+
     # best_hps = tuner.get_best_hyperparameters(num_trials=1)[0]
     # return best_hps
     return tuner
-
 
 
 def save_trial_results(tuner, args):
@@ -311,21 +259,20 @@ def save_trial_results(tuner, args):
     if args.verbose >= 2:
         print("Converted trial data to DataFrame.")
     
-    output_path = f'{args.directory}/{args.project_name}/trial_results_{args.project_name}.csv'
-    df.to_csv(output_path, index=False)  # Save to CSV
+    # Assuming args.directory and args.project_name are defined somewhere in your code
+    output_path = f'{args.directory}/{args.project_name}/../trial_results_.csv'
+
+    # Check if the CSV file exists to determine whether to write the header
+    file_exists = os.path.exists(output_path)
+
+    # Write the DataFrame to the CSV file, appending if the file exists
+    df.to_csv(output_path, mode='a', header=not file_exists, index=False)
+    
     if args.verbose >= 2:
         print(f"Saved trial results to {output_path}")
 
 
 if __name__ == "__main__":
-    metrics = {
-        "mean_squared_error": mean_squared_error,
-        "mean_absolute_error": mean_absolute_error,
-        "pearson_r2": pearson_r2,
-        "hellinger_distance": hellinger_distance,
-        "mean_error": mean_error
-    }
-
     parser = argparse.ArgumentParser()
     parser.add_argument("config", help="Config yaml file")
     parser.add_argument("model_type", default=None, help="Model type to be tuned")
@@ -335,8 +282,16 @@ if __name__ == "__main__":
     parser.add_argument("--directory", type=str, default="../../data/hypertuner_output")
     parser.add_argument("--project_name", type=str, default="hyperparam_tuning_")
     parser.add_argument("--max_trials", type=int, default=10)
-    parser.add_argument("--search_type", type=str, default='bay')
+    parser.add_argument("--search_type", type=str, default='grid')
     args = parser.parse_args()
+
+    args.metrics = {
+        "mean_squared_error": mean_squared_error,
+        "mean_absolute_error": mean_absolute_error,
+        "pearson_r2": pearson_r2,
+        "hellinger_distance": hellinger_distance,
+        "mean_error": mean_error
+    }
 
     if args.verbose >= 2:
         print(f"Arguments: {args}")
@@ -357,40 +312,24 @@ if __name__ == "__main__":
 
     
     '''--------------------------------------------------------------'''
-    num_folds = 10
-    search_space_combinations = [(i, j) for i in range(1, 101) for j in range(i, 101)]
-    print(search_space_combinations)
-    parallel = 3
-    def test(a,b):
-        print(a+b)
-    # search_space_chunks = [search_space_combinations[i::parallel] for i in range(parallel)]
+    hidden_layers = [1, 3, 5]
+    hidden_neurons = [16, 32, 64, 128, 256]
+    lr = [0.01, 0.001, 0.0001]
+    es = [True, False]
 
+    from itertools import product
+    search_space_combinations = list(product(hidden_layers, hidden_neurons, lr, es))
+    search_space_combinations = search_space_combinations[:9]
+    print(search_space_combinations)
+    print(len(search_space_combinations))
+
+    print()
+    
+    parallel = 4
     # Using multiprocessing.Pool to parallelize cross-validation
     with mp.Pool(processes=parallel) as pool:
         # pool.starmap(hyperparameter_tuning, search_space_combinations)
-        pool.starmap(test, search_space_combinations)
+        pool.starmap(hyperparameter_tuning, [(config, args, 0, 'grid', combo) for combo in search_space_combinations])
 
     '''--------------------------------------------------------------'''
 
-
-    # Assuming config is defined and contains necessary keys
-    tuner = hyperparameter_tuning(config, args, verbose=args.verbose, type=args.search_type)
-    if args.verbose >= 2:
-        print("Hyperparameter tuner initialized.")
-
-    best_hyperparameters = tuner.get_best_hyperparameters(num_trials=1)[0]
-    if args.verbose >= 2:
-        print(f"Best hyperparameters found: {best_hyperparameters}")
-
-    print('\n\n')
-    tuner.search_space_summary()
-    if args.verbose >= 2:
-        print("Search space summary printed.")
-
-    tuner.results_summary()  # prints summary of top 10 trials
-    if args.verbose >= 2:
-        print("Results summary printed.")
-
-    print('\n\n\n')
-
-    save_trial_results(tuner, args)

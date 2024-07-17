@@ -1,6 +1,7 @@
 import pandas as pd
 import argparse
 import sys
+import yaml
 
 def calc_mean_metrics_kfold():
     # parser to read command line args
@@ -15,13 +16,13 @@ def calc_mean_metrics_kfold():
         sys.exit()
 
     df_list = []                                                        # Initialize an empty list to store dataframes
-
+    name = config['file_name']
     out_dir = config['out_dir']                                         # outer path to store average metrics csv
 
     # Loop through the k-folds (0 to 9)
     for num in range(10):
         # Construct the file path
-        file_path = f'{out_dir}--kfold-{num}/surface_layer_model_metrics.csv'
+        file_path = f'{out_dir}{name}/model_QC_--kfold-{num}/surface_layer_model_metrics.csv'
         
         df = pd.read_csv(file_path)                                     # Read the CSV file into a dataframe
         

@@ -448,7 +448,7 @@ def merge_dataframes_final_model(df_list):
     test_df = pd.DataFrame() # return Test as empty because this model will be tested on the holdout set
     return train_df, val_df, test_df
 
-def load_derived_data_random_test_train_val(filename, dropna=False, filter_counter_gradient=False, devVar=None, N=10, k=0, scramble=False, holdout_ratio=None):
+def load_derived_data_random_test_train_val(filename, dropna=False, filter_counter_gradient=False, devVar=None, N=10, k=0, scramble=False, holdout_ratio=None, verbose=0):
     """
     Load derived data file, remove NaN events, and split the data into training and test sets.
 
@@ -531,8 +531,9 @@ def load_derived_data_random_test_train_val(filename, dropna=False, filter_count
         # Calculate holdout set size
         holdout_size = int(len(all_data) * holdout_ratio)
         data["holdout"] = all_data.iloc[:holdout_size]
-        print("data holdout",len(data['holdout']))
-        print(f'data all {len(all_data)}')
+        if verbose >= 2:
+            print("data holdout",len(data['holdout']))
+            print(f'data all {len(all_data)}')
 
         # Remaining Data
         all_data = all_data.iloc[holdout_size:]
