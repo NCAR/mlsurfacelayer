@@ -1,7 +1,7 @@
 #
 #
 #
-file_name: "cv_test"
+file_name: "sin_cos_test_fix"
 data_file: "../../data/mvco_mlsl_qc.csv"
 out_dir: "../../data/model_output/"
 filter_counter_gradient: 0
@@ -129,7 +129,7 @@ stability_column: "bulk_richardson:18.4_m:none"
 
 k_fold_cross_validation:
   devVar: 'kfold'
-  N: 3
+  N: 10
   k: 0
   holdout_ratio: 0.1
   scramble: False

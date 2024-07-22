@@ -1,0 +1,9 @@
+Metadata-Version: 2.1
+Name: mlsurfacelayer
+Version: 0.1
+Summary: Machine learning parameterizations for the surface layer.
+Home-page: https://github.com/NCAR/mlsurfacelayer
+Author: David John Gagne, Tyler McCandless, and Tom Brummet
+Author-email: dgagne@ucar.edu
+License: MIT
+License-File: LICENSE

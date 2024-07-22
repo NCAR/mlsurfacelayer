@@ -47,6 +47,16 @@ def draw_loss(cut, direc, show=False, save=True, save_path=None):
     print("\nfinished loss")
 
 def draw_mf(df, show=False, save=True, save_path=None):
+    pred1 = 'momentum_flux'
+    ex_pred1 = "momentum_flux:18.4_m:m2_s-2"
+
+    pred2 = 'heat_flux'
+    ex_pred2 = 'heat_flux:18.4_m:degrees_C_m_s-1' # degrees celsius , meters per second
+    
+    mo_version = 'MOST_'
+
+
+    
     if save_path==None: 
         print('Error, save_path is None, cannot save files') 
         return   
@@ -107,6 +117,16 @@ def draw_mf(df, show=False, save=True, save_path=None):
 
 
 def draw_hf(df, show=False, save=True, save_path=None):
+    pred1 = 'momentum_flux'
+    ex_pred1 = "momentum_flux:18.4_m:m2_s-2"
+
+    pred2 = 'heat_flux'
+    ex_pred2 = 'heat_flux:18.4_m:degrees_C_m_s-1' # degrees celsius , meters per second
+    
+    mo_version = 'MOST_'
+
+
+
     if save_path==None: 
         print('Error, save_path is None, cannot save files') 
         return

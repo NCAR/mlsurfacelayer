@@ -185,6 +185,12 @@ def cross_val_score(hp, config, model, args, fold, verbose=0):
         pred = model.predict(scaled_test[:, :-1])
         pred = pred * input_scaler.scale_[-1] + input_scaler.mean_[-1]
 
+        if output_column == 'log_momentum_flux':
+            pred = np.exp(pred) - 1e-6
+            precision = max([len(str(x).split('.')[1]) if '.' in str(x) else 0 for x in data['test']["momentum_flux:18.4_m:m2_s-2"]]) # gets precision of measured values (2 sig figs in this case)
+            pred = np.round(pred, decimals=precision)
+
+
         score = args.metrics[metric](data["test"][output_column], pred)
     
     if verbose >= 2:
@@ -263,11 +269,13 @@ def save_trial_results(tuner, args):
     for trial in trials:
         trial_info = {
             "Trial ID": trial.trial_id,
-            "Hyperparameters": trial.hyperparameters.values,
+            "Hyperparameters": {"hidden_layers": args.hl,"hidden_neurons": args.hn,"learning_rate": args.lr,"early_stop": args.es,},
+            # "Hyperparameters": trial.hyperparameters.values,
             "Score": trial.score,
             "Status": trial.status
         }
         trial_data.append(trial_info)
+
 
     df = pd.DataFrame(trial_data)  # Convert to DataFrame
     if args.verbose >= 2:
@@ -341,11 +349,10 @@ es = [True, False]
 
 from itertools import product
 search_space_combinations = list(product(hidden_layers, hidden_neurons, lr, es))
-search_space_combinations = search_space_combinations[:21]
 
 # search_space_combinations = [(config, args, 0, 'grid', combo) for combo in search_space_combinations]
 print('\n\n\n search:', search_space_combinations, len(search_space_combinations))
-parallel = 3
+parallel = 9
 
 
 def wrapper(combo):
@@ -355,6 +362,10 @@ def wrapper(combo):
     hyperparameter_tuning(config, args, verbose=0, type='grid', combo=combo)
 
 if __name__ == '__main__':
+    # combo=(1,16,0.01,True)
+    # wrapper(combo=combo)
+    # exit()
+
     # Using multiprocessing.Pool to parallelize cross-validation
     with mp.Pool(processes=parallel) as pool:
         # pool.starmap(wrapper, search_space_combinations)

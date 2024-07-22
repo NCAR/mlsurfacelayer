@@ -1,7 +1,7 @@
 #
 #
 #
-file_name: "cv_test"
+file_name: "sin_cos_test_log"
 data_file: "../../data/mvco_mlsl_qc.csv"
 out_dir: "../../data/model_output/"
 filter_counter_gradient: 0
@@ -68,7 +68,8 @@ input_columns:
 'SIN_wave_direction:18.4_m:rad'
 ]
 output_columns:
-  momentum_flux: "momentum_flux:18.4_m:m2_s-2" # mf units
+  # momentum_flux: "momentum_flux:18.4_m:m2_s-2" # mf units
+  momentum_flux: "log_momentum_flux" # mf units
   heat_flux: "heat_flux:18.4_m:degrees_C_m_s-1" # hf units
   
 derived_columns: [
@@ -122,14 +123,17 @@ derived_columns: [
 "MOST_chopped_momentum_flux:18.4_m:m2_s-2",
 "MOST_chopped_heat_flux:18.4_m:degrees_K_m_s-1",
 "MOST_rounded_momentum_flux:18.4_m:m2_s-2",
-"MOST_rounded_heat_flux:18.4_m:degrees_K_m_s-1"
+"MOST_rounded_heat_flux:18.4_m:degrees_K_m_s-1",
+"log_momentum_flux",
+"exp_momentum_flux",
+"momentum_flux:18.4_m:m2_s-2"
 ]
 # stability_column: "bulk_richardson:12_m:none"
 stability_column: "bulk_richardson:18.4_m:none"
 
 k_fold_cross_validation:
   devVar: 'kfold'
-  N: 3
+  N: 10
   k: 0
   holdout_ratio: 0.1
   scramble: False

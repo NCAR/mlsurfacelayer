@@ -278,8 +278,18 @@ def main():
         #
         # Copy the test truth data for this predictand to the model_predictions data frame
         #
-        model_predictions.loc[:, output_columns[output_type]] = data["test"][output_columns[output_type]]
+        # print('outcol outtype', output_columns[output_type])
+        # print('len of data', len(data["test"][output_columns[output_type]]))
+        # print('len of model pred', len(model_predictions.loc[:, output_columns[output_type]]))
+        
 
+        '''these 3 lines below did not work, it ended up deleting the origianl dataframe'''
+        # if output_columns[output_type] == 'log_momentum_flux':
+        #     model_predictions['test_assignment'] = data["test"][output_columns[output_type]]
+        #     print("Assignment successful")
+        # else:
+        model_predictions.loc[:, output_columns[output_type]] = data["test"][output_columns[output_type]]
+        
         #
         # Data normalizer
         #
@@ -475,6 +485,15 @@ def main():
                 scaled_test.to_csv(join(out_dir, predictandLabel_model + "_scaled_metrics_NN.csv"), index=False)
                 
                 model_predictions[predictandLabel_model] = model_predictions[predictandLabel_model]  * input_scalers[output_type].scale_[len(input_scalers[output_type].scale_) - 1 ] + input_scalers[output_type].mean_[len(input_scalers[output_type].mean_) - 1 ]
+                
+                if output_columns[output_type] == 'log_momentum_flux':
+                    # derived_data['exp_momentum_flux'] = np.exp(derived_data["log_momentum_flux"]) - 1e-6
+                    # precision = max([len(str(x).split('.')[1]) if '.' in str(x) else 0 for x in derived_data["momentum_flux:18.4_m:m2_s-2"]]) # gets precision of measured values (2 sig figs in this case)
+                    # derived_data['exp_momentum_flux'] = np.round(derived_data['exp_momentum_flux'], decimals=precision)
+                    
+                    model_predictions[predictandLabel_model] = np.exp(model_predictions[predictandLabel_model]) - 1e-6
+                    precision = max([len(str(x).split('.')[1]) if '.' in str(x) else 0 for x in derived_columns["momentum_flux:18.4_m:m2_s-2"]]) # gets precision of measured values (2 sig figs in this case)
+                    model_predictions[predictandLabel_model] = np.round(model_predictions[predictandLabel_model], decimals=precision)
 
             #
             # Compute error metrics

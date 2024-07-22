@@ -128,7 +128,13 @@ def process_mvco_data(csv_path, out_file, nan_column="", mvco_lon=-70.544, mvco_
                        "MOST_chopped_momentum_flux:18.4_m:m2_s-2",
                        "MOST_chopped_heat_flux:18.4_m:degrees_K_m_s-1",
                        "MOST_rounded_momentum_flux:18.4_m:m2_s-2",
-                       "MOST_rounded_heat_flux:18.4_m:degrees_K_m_s-1"]
+                       "MOST_rounded_heat_flux:18.4_m:degrees_K_m_s-1",
+                       'COS_wind_direction:18.4_m:rad',
+                       'SIN_wind_direction:18.4_m:rad',
+                       'COS_wave_direction:18.4_m:rad',
+                       'SIN_wave_direction:18.4_m:rad',
+                       'log_momentum_flux',
+                       'exp_momentum_flux']
 
 
 
@@ -265,6 +271,17 @@ def process_mvco_data(csv_path, out_file, nan_column="", mvco_lon=-70.544, mvco_
     #
     if verbose == 2: print("Fluxes")
     derived_data['momentum_flux:18.4_m:m2_s-2'] = raw_data["UpWpBar1_QC"]
+    derived_data["momentum_flux:18.4_m:m2_s-2"] = -derived_data["momentum_flux:18.4_m:m2_s-2"] # first we apply the factor -1 to switch the polarity of the values
+    derived_data["momentum_flux:18.4_m:m2_s-2"] = derived_data["momentum_flux:18.4_m:m2_s-2"].where(derived_data["momentum_flux:18.4_m:m2_s-2"] >=0) # then we seperate the positive values and leave the negative values behind
+
+    derived_data['log_momentum_flux'] = np.log(derived_data['momentum_flux:18.4_m:m2_s-2'] + 1e-6)
+    
+    # how to turn the log values of MF back into standard values
+    derived_data['exp_momentum_flux'] = np.exp(derived_data["log_momentum_flux"]) - 1e-6
+    precision = max([len(str(x).split('.')[1]) if '.' in str(x) else 0 for x in derived_data["momentum_flux:18.4_m:m2_s-2"]]) # gets precision of measured values (2 sig figs in this case)
+    derived_data['exp_momentum_flux'] = np.round(derived_data['exp_momentum_flux'], decimals=precision)
+    # ---
+
     derived_data['heat_flux:18.4_m:degrees_C_m_s-1'] = raw_data["WpTpBar1_QC"]
     derived_data['friction_velocity:18.4_m:m_s-1'] = np.sqrt(derived_data['momentum_flux:18.4_m:m2_s-2'])
     derived_data['temperature_scale:18.4_m:K'] = 0 # put this in 
@@ -290,6 +307,15 @@ def process_mvco_data(csv_path, out_file, nan_column="", mvco_lon=-70.544, mvco_
     derived_data[['MOST_chopped_momentum_flux:18.4_m:m2_s-2','MOST_chopped_heat_flux:18.4_m:degrees_K_m_s-1']] = derived_data[['MOST_momentum_flux:18.4_m:m2_s-2','MOST_heat_flux:18.4_m:degrees_K_m_s-1']].applymap(lambda x: np.floor(x * 100) / 100)
     #momentum_flux = []
     #heat_flux = []
+
+    import math
+    derived_data['COS_wind_direction:18.4_m:rad'] = derived_data.apply(lambda derived_data: math.cos(math.radians(derived_data["wind_direction:18.4_m:degrees"])), axis=1) 
+    derived_data['SIN_wind_direction:18.4_m:rad'] = derived_data.apply(lambda derived_data: math.sin(math.radians(derived_data["wind_direction:18.4_m:degrees"])), axis=1)
+
+    derived_data['COS_wave_direction:18.4_m:rad'] = derived_data.apply(lambda derived_data: math.cos(math.radians(derived_data["wave_direction:0_m:degrees"])), axis=1)
+    derived_data['SIN_wave_direction:18.4_m:rad'] = derived_data.apply(lambda derived_data: math.sin(math.radians(derived_data["wave_direction:0_m:degrees"])), axis=1)
+
+
 
     #for index, row in derived_data.iterrows():
     #    fluxes = mo.computeMOSTfluxes(18.4, 
@@ -475,9 +501,7 @@ def load_derived_data_random_test_train_val(filename, dropna=False, filter_count
     #all_data = all_data[all_data['momentum_flux:18.4_m:m2_s-2'].mul(-1) >= 0]
 
     #print(all_data["momentum_flux:18.4_m:m2_s-2"].where(-all_data["momentum_flux:18.4_m:m2_s-2"] >0).head(250), '\n')
-    all_data["momentum_flux:18.4_m:m2_s-2"] = -all_data["momentum_flux:18.4_m:m2_s-2"] # first we apply the factor -1 to switch the polarity of the values
-    all_data["momentum_flux:18.4_m:m2_s-2"] = all_data["momentum_flux:18.4_m:m2_s-2"].where(all_data["momentum_flux:18.4_m:m2_s-2"] >=0) # then we seperate the positive values and leave the negative values behind
-
+    
     #print('\nafter\n' ,all_data['momentum_flux:18.4_m:m2_s-2'].head(250),'\n\n\n')
     #pd.reset_option('display.max_rows')    
 
@@ -501,7 +525,8 @@ def load_derived_data_random_test_train_val(filename, dropna=False, filter_count
             "wind_direction:18.4_m:degrees", 
             "angle_between_wind_wave:0_m:degrees", 
             "bulk_richardson:18.4_m:none",
-            "momentum_flux:18.4_m:m2_s-2"])
+            "momentum_flux:18.4_m:m2_s-2",
+            "log_momentum_flux"])
 
 
     data = dict()

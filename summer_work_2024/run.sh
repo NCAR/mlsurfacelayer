@@ -9,7 +9,8 @@ fi
 # VARS
 ARG=$1                                                  # Get the argument
 LOGFILE="../../data/model_output/${ARG}/timing_log.txt" # Name the time file for recording
-CONDA_ENV="RAL"                                         # Name of your conda environment
+LOGFILE2="../../data/model_output/${ARG}/error_log.txt" # Name the time file for recording
+# CONDA_ENV="RAL"                                         # Name of your conda environment
 # CONDA_ENV="../../data/conda-envs/ral"                   # Name of your conda environment on casper
 CREATEKFOLD_SCRIPT="createKfoldYaml.py"
 TRAIN_MODEL_SCRIPT="../scripts/train_offshore_models_mvco.py"
@@ -18,16 +19,18 @@ CALC_METRIC_SCRIPT="average_metrics.py"                 # calc average of all Kf
 
 mkdir -p "../../data/model_output/${ARG}"               # Create the parent directories if they do not exist
 > $LOGFILE                                              # Clear the log file if it exists
+> $LOGFILE2                                             # Clear the log file if it exists
 
 
 # module load conda                                     # for casper
 # cd mlsurfacelayer                                     # for casper
 cd ..                                                   # for local machine
-pip install . && cd summer_work_2024
+pip install . > /dev/null 2>&1 &
+cd summer_work_2024
 
 # Activate the conda environment
-source $(conda info --base)/etc/profile.d/conda.sh
-conda activate $CONDA_ENV
+# source $(conda info --base)/etc/profile.d/conda.sh
+# conda activate $CONDA_ENV
 
 # Loop to call the Python scripts with the argument
 for i in {0..9}; do
@@ -40,4 +43,4 @@ for i in {0..9}; do
     if [ $i -eq 9 ]; then echo 'calculating average metrics' | tee -a $LOGFILE && python $CALC_METRIC_SCRIPT ../config/${ARG}.yml;fi 
 done
 
-conda deactivate # Deactivate the conda environment
+# conda deactivate # Deactivate the conda environment

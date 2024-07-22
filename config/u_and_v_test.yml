@@ -1,7 +1,7 @@
 #
 #
 #
-file_name: "cv_test"
+file_name: "u_and_v_test"
 data_file: "../../data/mvco_mlsl_qc.csv"
 out_dir: "../../data/model_output/"
 filter_counter_gradient: 0
@@ -24,7 +24,9 @@ input_columns:
 "wave_height:0_m:m",
 "wave_period:0_m:s",
 "angle_between_wind_wave:0_m:degrees",
-"wind_speed:18.4_m:m_s-1",
+# "wind_speed:18.4_m:m_s-1",
+"u_wind:18.4_m:m_s-1",
+"v_wind:18.4_m:m_s-1",
 # "wind_direction:18.4_m:degrees",
 # "bulk_richardson:12_m:none"
 "bulk_richardson:18.4_m:none",
@@ -33,8 +35,8 @@ input_columns:
 #"skin_virtual_potential_temperature:0_m:K",
 #"mixing_ratio:0_m:g_kg-1",
 #"wave_phase_speed:0_m:m_s-1",
-'COS_wind_direction:18.4_m:rad',
-'SIN_wind_direction:18.4_m:rad',
+# 'COS_wind_direction:18.4_m:rad',
+# 'SIN_wind_direction:18.4_m:rad',
 'COS_wave_direction:18.4_m:rad',
 'SIN_wave_direction:18.4_m:rad'
 ]
@@ -52,7 +54,9 @@ input_columns:
 "wave_height:0_m:m",
 "wave_period:0_m:s",
 "angle_between_wind_wave:0_m:degrees",
-"wind_speed:18.4_m:m_s-1",
+# "wind_speed:18.4_m:m_s-1",
+"u_wind:18.4_m:m_s-1",
+"v_wind:18.4_m:m_s-1",
 # "wind_direction:18.4_m:degrees",
 # "bulk_richardson:12_m:none"
 "bulk_richardson:18.4_m:none",
@@ -62,8 +66,8 @@ input_columns:
 #"mixing_ratio:0_m:g_kg-1",
 #"wave_phase_speed:0_m:m_s-1",
 #"sensible_heat_flux:12_m:W_m-2"
-'COS_wind_direction:18.4_m:rad',
-'SIN_wind_direction:18.4_m:rad',
+# 'COS_wind_direction:18.4_m:rad',
+# 'SIN_wind_direction:18.4_m:rad',
 'COS_wave_direction:18.4_m:rad',
 'SIN_wave_direction:18.4_m:rad'
 ]
@@ -105,8 +109,8 @@ derived_columns: [
 'v_wind:18.4_m:m_s-1', 
 # 'bulk_richardson:12_m:none', 
 'bulk_richardson:18.4_m:none', 
-'u_w:18.4_m:m2_s-2',
-'v_w:18.4_m:m2_s-2',
+# 'u_w:18.4_m:m2_s-2',
+# 'v_w:18.4_m:m2_s-2',
 #'friction_velocity:18.4_m:m_s-1',
 #'kinematic_sensible_heat_flux:18.4_m:K_m_s-1',
 #'temperature_scale:18.4_m:K'
@@ -129,7 +133,7 @@ stability_column: "bulk_richardson:18.4_m:none"
 
 k_fold_cross_validation:
   devVar: 'kfold'
-  N: 3
+  N: 10
   k: 0
   holdout_ratio: 0.1
   scramble: False

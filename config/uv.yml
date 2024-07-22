@@ -1,7 +1,7 @@
 #
 #
 #
-file_name: "cv_test"
+file_name: "uv"
 data_file: "../../data/mvco_mlsl_qc.csv"
 out_dir: "../../data/model_output/"
 filter_counter_gradient: 0
@@ -24,7 +24,9 @@ input_columns:
 "wave_height:0_m:m",
 "wave_period:0_m:s",
 "angle_between_wind_wave:0_m:degrees",
-"wind_speed:18.4_m:m_s-1",
+# "wind_speed:18.4_m:m_s-1",
+# "dSpeed/dz",
+# "dT/dz",
 # "wind_direction:18.4_m:degrees",
 # "bulk_richardson:12_m:none"
 "bulk_richardson:18.4_m:none",
@@ -32,11 +34,17 @@ input_columns:
 #"potential_temperature:12_m:K",
 #"skin_virtual_potential_temperature:0_m:K",
 #"mixing_ratio:0_m:g_kg-1",
-#"wave_phase_speed:0_m:m_s-1",
-'COS_wind_direction:18.4_m:rad',
-'SIN_wind_direction:18.4_m:rad',
-'COS_wave_direction:18.4_m:rad',
-'SIN_wave_direction:18.4_m:rad'
+"wave_phase_speed:0_m:m_s-1",
+# 'COS_wind_direction:18.4_m:rad',
+# 'SIN_wind_direction:18.4_m:rad',
+# 'COS_wave_direction:18.4_m:rad',
+# 'SIN_wave_direction:18.4_m:rad'
+"u_wind:18.4_m:m_s-1",
+"v_wind:18.4_m:m_s-1",
+"near_surf_current_u:0_m:m_s-1",
+"near_surf_current_v:0_m:m_s-1",
+"u_wave:0_m:m_s-1",
+"v_wave:0_m:m_s-1"
 ]
   heat_flux: [
 "zenith:0_m:degrees",
@@ -52,7 +60,9 @@ input_columns:
 "wave_height:0_m:m",
 "wave_period:0_m:s",
 "angle_between_wind_wave:0_m:degrees",
-"wind_speed:18.4_m:m_s-1",
+# "wind_speed:18.4_m:m_s-1",
+# "dSpeed/dz",
+# "dT/dz",
 # "wind_direction:18.4_m:degrees",
 # "bulk_richardson:12_m:none"
 "bulk_richardson:18.4_m:none",
@@ -60,12 +70,18 @@ input_columns:
 #"potential_temperature:12_m:K",
 #"skin_virtual_potential_temperature:0_m:K",
 #"mixing_ratio:0_m:g_kg-1",
-#"wave_phase_speed:0_m:m_s-1",
+"wave_phase_speed:0_m:m_s-1",
 #"sensible_heat_flux:12_m:W_m-2"
-'COS_wind_direction:18.4_m:rad',
-'SIN_wind_direction:18.4_m:rad',
-'COS_wave_direction:18.4_m:rad',
-'SIN_wave_direction:18.4_m:rad'
+# 'COS_wind_direction:18.4_m:rad',
+# 'SIN_wind_direction:18.4_m:rad',
+# 'COS_wave_direction:18.4_m:rad',
+# 'SIN_wave_direction:18.4_m:rad'
+"u_wind:18.4_m:m_s-1",
+"v_wind:18.4_m:m_s-1",
+"near_surf_current_u:0_m:m_s-1",
+"near_surf_current_v:0_m:m_s-1",
+"u_wave:0_m:m_s-1",
+"v_wave:0_m:m_s-1"
 ]
 output_columns:
   momentum_flux: "momentum_flux:18.4_m:m2_s-2" # mf units
@@ -94,10 +110,8 @@ derived_columns: [
 'wave_height:0_m:m', 
 'wave_period:0_m:s',
 'wave_phase_speed:0_m:m_s-1', 
-
 'near_surf_current:0_m:m_s-1',
 'near_surf_current_dir:0_m:deg', 
-
 'wind_speed:18.4_m:m_s-1',
 'wind_direction:18.4_m:degrees', 
 'angle_between_wind_wave:0_m:degrees',
@@ -110,13 +124,11 @@ derived_columns: [
 #'friction_velocity:18.4_m:m_s-1',
 #'kinematic_sensible_heat_flux:18.4_m:K_m_s-1',
 #'temperature_scale:18.4_m:K'
-
 # added derivative below
 "dT_dz:18.4_m:K_m-1",
 "dSpeed_dz:18.4_m:s-1",
 #"du/dz", # 'U/z' 
 #"dv/dz" # 'V/z' 
-
 "MOST_momentum_flux:18.4_m:m2_s-2",
 "MOST_heat_flux:18.4_m:degrees_K_m_s-1",
 "MOST_chopped_momentum_flux:18.4_m:m2_s-2",
@@ -129,7 +141,7 @@ stability_column: "bulk_richardson:18.4_m:none"
 
 k_fold_cross_validation:
   devVar: 'kfold'
-  N: 3
+  N: 5
   k: 0
   holdout_ratio: 0.1
   scramble: False

@@ -34,7 +34,7 @@ def calc_mean_metrics_kfold():
 
     average_metrics = combined_df.groupby('Model').mean().reset_index() # Compute the average of the metrics across all folds
 
-    average_metrics.to_csv(f'{out_dir}/average_metrics.csv', index=False) # Save the result to a new CSV file
+    average_metrics.to_csv(f'{out_dir}/average_metrics_{name}.csv', index=False) # Save the result to a new CSV file
 
 if __name__ == "__main__":
     calc_mean_metrics_kfold()  
