@@ -153,14 +153,13 @@ model_config:
     n_jobs: 4
     max_leaf_nodes: 1024
   neural_network:
-    # hidden_layers: 5 
-    hidden_layers: 1 
-    hidden_neurons: 64 
+    hidden_layers: 5
+    hidden_neurons: 128
     batch_size: 32
-    epochs: 1000
+    epochs: 100
     lr: 0.001
     activation: tanh
     l2_weight: 0.0
     min_delta: 0.01
     patience: 25
-    early_stop: True
+    early_stop: False

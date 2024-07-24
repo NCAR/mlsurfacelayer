@@ -19,7 +19,7 @@ CALC_METRIC_SCRIPT="average_metrics.py"                 # calc average of all Kf
 
 mkdir -p "../../data/model_output/${ARG}"               # Create the parent directories if they do not exist
 > $LOGFILE                                              # Clear the log file if it exists
-> $LOGFILE2                                             # Clear the log file if it exists
+# > $LOGFILE2                                             # Clear the log file if it exists
 
 
 # module load conda                                     # for casper
@@ -33,14 +33,27 @@ cd summer_work_2024
 # conda activate $CONDA_ENV
 
 # Loop to call the Python scripts with the argument
+echo "creating sub YAML's" | tee -a $LOGFILE && python $CREATEKFOLD_SCRIPT ../config/${ARG}.yml
+
 for i in {0..9}; do
-    if [ $i -eq 0 ]; then echo "creating sub YAML's" | tee -a $LOGFILE && python $CREATEKFOLD_SCRIPT ../config/${ARG}.yml; fi
+    MODEL_QC_PATH="../../data/model_output/${ARG}/${ARG}--kfold-${i}.yml"
+    if [ ! -e "${MODEL_QC_PATH}" ]; then
+        echo "Skipping kfold ${i} as ${MODEL_QC_PATH} does not exist"
+        continue
+    fi
 
-    echo "Timing train_offshore_models_mvco.py for kfold ${i}" | tee -a $LOGFILE && { time (python $TRAIN_MODEL_SCRIPT ../../data/model_output/${ARG}/${ARG}--kfold-${i}.yml > /dev/null 2>&1); } >> $LOGFILE 2>&1
+    LOGFILE2="../../data/model_output/${ARG}/error_log_${i}.txt" # Name the time file for recording
+    > $LOGFILE2                                             # Clear the log file if it exists
+    echo "Timing train_offshore_models_mvco.py for kfold ${i}" | tee -a $LOGFILE && { time (python $TRAIN_MODEL_SCRIPT ../../data/model_output/${ARG}/${ARG}--kfold-${i}.yml > $LOGFILE2 2>&1); } >> $LOGFILE 2>&1
 
-    echo "Timing o_mvco_model_analysis.py for kfold ${i}" | tee -a $LOGFILE && { time (python $DRAW_GRAPHS_SCRIPT ../../data/model_output/${ARG}/${ARG}--kfold-${i}.yml > /dev/null 2>&1); } >> $LOGFILE 2>&1
-
-    if [ $i -eq 9 ]; then echo 'calculating average metrics' | tee -a $LOGFILE && python $CALC_METRIC_SCRIPT ../config/${ARG}.yml;fi 
+    LOGFILE3="../../data/model_output/${ARG}/error_analysis_log_${i}.txt" # Name the time file for recording
+    > $LOGFILE3                                             # Clear the log file if it exists
+    echo "Timing o_mvco_model_analysis.py for kfold ${i}" | tee -a $LOGFILE && { time (python $DRAW_GRAPHS_SCRIPT ../../data/model_output/${ARG}/${ARG}--kfold-${i}.yml > $LOGFILE3 2>&1); } >> $LOGFILE 2>&1
 done
+
+echo 'calculating average metrics' | tee -a $LOGFILE && python $CALC_METRIC_SCRIPT ../config/${ARG}.yml
+
+echo 'Timing o_mvco_model_analysis.py for average' | tee -a $LOGFILE && { time (python $DRAW_GRAPHS_SCRIPT ../../data/model_output/${ARG}/${ARG}--kfold-${i}.yml --average > $LOGFILE3 2>&1); } >> $LOGFILE 2>&1
+
 
 # conda deactivate # Deactivate the conda environment

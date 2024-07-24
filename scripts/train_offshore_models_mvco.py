@@ -112,7 +112,8 @@ def main():
                                                     N=config['k_fold_cross_validation']['N'],
                                                     k=config['k_fold_cross_validation']['k'],
                                                     holdout_ratio=config['k_fold_cross_validation']['holdout_ratio'],
-                                                    scramble=config['k_fold_cross_validation']['scramble'])#,
+                                                    scramble=config['k_fold_cross_validation']['scramble'],
+                                                    config=config)#,
     for a in data:
         data[a]['momentum_flux:18.4_m:m2_s-2'] = data[a]['momentum_flux:18.4_m:m2_s-2'].replace(-0.0, 0)
 
@@ -422,6 +423,20 @@ def main():
                 model_predictions.loc[:, predictandLabel_model] = model_objects[
                     model_name][output_type].predict(scaled_test[:,0:-1] )
 
+                # Check for NaNs
+                def check_for_nans(data):
+                    if isinstance(data, pd.DataFrame):
+                        nan_summary = data.isna().sum()
+                        print("NaNs in DataFrame:", nan_summary)
+                    elif isinstance(data, np.ndarray):
+                        nan_summary = np.isnan(data).sum()
+                        print("NaNs in ndarray:", nan_summary)
+                    else:
+                        print("Unsupported data type")
+
+                # Example usage with your scaled_train DataFrame
+                check_for_nans(scaled_train[:,0:-1])
+                check_for_nans(scaled_train[:,-1])
 
                 #
                 # Compute feature importances for neutral regime 

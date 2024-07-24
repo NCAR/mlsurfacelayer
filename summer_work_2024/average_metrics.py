@@ -20,7 +20,7 @@ def calc_mean_metrics_kfold():
     out_dir = config['out_dir']                                         # outer path to store average metrics csv
 
     # Loop through the k-folds (0 to 9)
-    for num in range(10):
+    for num in range(config['k_fold_cross_validation']['N']):
         # Construct the file path
         file_path = f'{out_dir}{name}/model_QC_--kfold-{num}/surface_layer_model_metrics.csv'
         
@@ -34,7 +34,7 @@ def calc_mean_metrics_kfold():
 
     average_metrics = combined_df.groupby('Model').mean().reset_index() # Compute the average of the metrics across all folds
 
-    average_metrics.to_csv(f'{out_dir}/average_metrics_{name}.csv', index=False) # Save the result to a new CSV file
+    average_metrics.to_csv(f'{out_dir}{name}/average_metrics_{name}.csv', index=False) # Save the result to a new CSV file
 
 if __name__ == "__main__":
     calc_mean_metrics_kfold()  

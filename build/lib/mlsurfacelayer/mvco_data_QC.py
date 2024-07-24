@@ -104,12 +104,18 @@ def process_mvco_data(csv_path, out_file, nan_column="", mvco_lon=-70.544, mvco_
                        "wave_phase_speed:0_m:m_s-1",
                        "u_wave:0_m:m_s-1",
                        "v_wave:0_m:m_s-1",
+                       'cos_wave_direction:18.4_m:radians',
+                       'sin_wave_direction:18.4_m:radians',
                        "near_surf_current_u:0_m:m_s-1",
                        "near_surf_current_v:0_m:m_s-1",
                        "near_surf_current:0_m:m_s-1",
                        "near_surf_current_dir:0_m:deg",
+                       "sin_near_surf_current_dir:0_m:radians",
+                       "cos_near_surf_current_dir:0_m:radians",
                        "u_wind:18.4_m:m_s-1",
                        "v_wind:18.4_m:m_s-1",
+                       'cos_wind_direction:18.4_m:radians',
+                       'sin_wind_direction:18.4_m:radians',
                        "wind_speed:18.4_m:m_s-1",
                        "wind_direction:18.4_m:degrees",
                        "angle_between_wind_wave:0_m:degrees",
@@ -129,10 +135,6 @@ def process_mvco_data(csv_path, out_file, nan_column="", mvco_lon=-70.544, mvco_
                        "MOST_chopped_heat_flux:18.4_m:degrees_K_m_s-1",
                        "MOST_rounded_momentum_flux:18.4_m:m2_s-2",
                        "MOST_rounded_heat_flux:18.4_m:degrees_K_m_s-1",
-                       'COS_wind_direction:18.4_m:rad',
-                       'SIN_wind_direction:18.4_m:rad',
-                       'COS_wave_direction:18.4_m:rad',
-                       'SIN_wave_direction:18.4_m:rad',
                        'log_momentum_flux',
                        'exp_momentum_flux']
 
@@ -217,7 +219,10 @@ def process_mvco_data(csv_path, out_file, nan_column="", mvco_lon=-70.544, mvco_
     derived_data["wave_phase_speed:0_m:m_s-1"] = derived_data["wave_period:0_m:s"]* 9.8/(2*np.pi)
     derived_data["u_wave:0_m:m_s-1"] = - derived_data["wave_phase_speed:0_m:m_s-1"]*np.sin( derived_data["wave_direction:0_m:degrees"])
     derived_data["v_wave:0_m:m_s-1"] = -derived_data["wave_phase_speed:0_m:m_s-1"]*np.cos( derived_data["wave_direction:0_m:degrees"]) 
-    derived_data["wave_height:0_m:m"] = raw_data["wave_height:0_m:m"]
+    derived_data["wave_height:0_m:m"] = raw_data["wave_height:0_m:m"]    
+    derived_data['cos_wave_direction:0_m:radians'] = np.cos(derived_data["wave_direction:0_m:degrees"] * np.pi/180) 
+    derived_data['sin_wave_direction:0_m:radians'] = np.sin(derived_data["wave_direction:0_m:degrees"] * np.pi/180) 
+
 
     #
     # Current variables
@@ -226,6 +231,8 @@ def process_mvco_data(csv_path, out_file, nan_column="", mvco_lon=-70.544, mvco_
     derived_data["near_surf_current_u:0_m:m_s-1"], derived_data["near_surf_current_v:0_m:m_s-1"] = raw_data["uc_QC"] /100 , raw_data["vc_QC"]/100
     derived_data["near_surf_current:0_m:m_s-1"] = np.sqrt(derived_data["near_surf_current_u:0_m:m_s-1"]**2 + derived_data["near_surf_current_v:0_m:m_s-1"]**2) 
     derived_data["near_surf_current_dir:0_m:deg"] = raw_data["near_surf_current_dir:0_m:deg"]
+    derived_data["sin_near_surf_current_dir:0_m:radians"] = np.sin(derived_data["near_surf_current_dir:0_m:deg"] * np.pi/180) 
+    derived_data["cos_near_surf_current_dir:0_m:radians"] = np.cos(derived_data["near_surf_current_dir:0_m:deg"] * np.pi/180) 
     
 
     #
@@ -234,7 +241,9 @@ def process_mvco_data(csv_path, out_file, nan_column="", mvco_lon=-70.544, mvco_
     if verbose == 2: print("Wind vars")
     derived_data["u_wind:18.4_m:m_s-1"], derived_data["v_wind:18.4_m:m_s-1"] = raw_data["u1_QC"], raw_data["v1_QC"]
     derived_data["wind_direction:18.4_m:degrees"] = np.arctan2(derived_data["u_wind:18.4_m:m_s-1"],derived_data["v_wind:18.4_m:m_s-1"]) * 180/np.pi 
-    derived_data["wind_speed:18.4_m:m_s-1"] = np.sqrt(derived_data['u_wind:18.4_m:m_s-1']**2 + derived_data['v_wind:18.4_m:m_s-1']**2)
+    derived_data["wind_speed:18.4_m:m_s-1"] = np.sqrt(derived_data['u_wind:18.4_m:m_s-1']**2 + derived_data['v_wind:18.4_m:m_s-1']**2)    
+    derived_data['cos_wind_direction:18.4_m:radians'] = np.cos(derived_data["wind_direction:18.4_m:degrees"] * np.pi/180) 
+    derived_data['sin_wind_direction:18.4_m:radians'] = np.sin(derived_data["wind_direction:18.4_m:degrees"] * np.pi/180) 
 
     #
     # Angle between wind and wave
@@ -307,13 +316,6 @@ def process_mvco_data(csv_path, out_file, nan_column="", mvco_lon=-70.544, mvco_
     derived_data[['MOST_chopped_momentum_flux:18.4_m:m2_s-2','MOST_chopped_heat_flux:18.4_m:degrees_K_m_s-1']] = derived_data[['MOST_momentum_flux:18.4_m:m2_s-2','MOST_heat_flux:18.4_m:degrees_K_m_s-1']].applymap(lambda x: np.floor(x * 100) / 100)
     #momentum_flux = []
     #heat_flux = []
-
-    import math
-    derived_data['COS_wind_direction:18.4_m:rad'] = derived_data.apply(lambda derived_data: math.cos(math.radians(derived_data["wind_direction:18.4_m:degrees"])), axis=1) 
-    derived_data['SIN_wind_direction:18.4_m:rad'] = derived_data.apply(lambda derived_data: math.sin(math.radians(derived_data["wind_direction:18.4_m:degrees"])), axis=1)
-
-    derived_data['COS_wave_direction:18.4_m:rad'] = derived_data.apply(lambda derived_data: math.cos(math.radians(derived_data["wave_direction:0_m:degrees"])), axis=1)
-    derived_data['SIN_wave_direction:18.4_m:rad'] = derived_data.apply(lambda derived_data: math.sin(math.radians(derived_data["wave_direction:0_m:degrees"])), axis=1)
 
 
 
@@ -474,7 +476,7 @@ def merge_dataframes_final_model(df_list):
     test_df = pd.DataFrame() # return Test as empty because this model will be tested on the holdout set
     return train_df, val_df, test_df
 
-def load_derived_data_random_test_train_val(filename, dropna=False, filter_counter_gradient=False, devVar=None, N=10, k=0, scramble=False, holdout_ratio=None, verbose=0):
+def load_derived_data_random_test_train_val(filename, dropna=False, filter_counter_gradient=False, devVar=None, N=10, k=0, scramble=False, holdout_ratio=None, verbose=0, config=None):
     """
     Load derived data file, remove NaN events, and split the data into training and test sets.
 
@@ -489,6 +491,10 @@ def load_derived_data_random_test_train_val(filename, dropna=False, filter_count
         dict: data divided into input, output, and derived with training and testing sets
     """
     # this creates a 75, 12.5, 12.5 split
+    
+    if config == None: 
+        print("Config is None in load_derived_data_random_test_train_val")
+        return
 
     all_data = pd.read_csv(filename, index_col="Time", parse_dates=["Time"])
     all_data =  all_data[~all_data.index.duplicated(keep='first')]
@@ -505,28 +511,41 @@ def load_derived_data_random_test_train_val(filename, dropna=False, filter_count
     #print('\nafter\n' ,all_data['momentum_flux:18.4_m:m2_s-2'].head(250),'\n\n\n')
     #pd.reset_option('display.max_rows')    
 
-    
-    all_data = all_data.dropna(subset=[ 
-            "zenith:0_m:degrees", 
-            "azimuth:0_m:degrees", 
-            # "temperature:18.4_m:K", 
-            "water_sfc_temperature:0_m:K", 
-            "pressure:18.4_m:hPa", 
-            "potential_temperature:18.4_m:K", 
-            "skin_virtual_potential_temperature:0_m:K", 
-            # "mixing_ratio:0_m:g_kg-1", 
-            "mixing_ratio:18.4_m:g_kg-1", 
-            "relative_humidity:18.4_m:%", 
-            "wave_direction:0_m:degrees", 
-            "wave_height:0_m:m", 
-            "wave_period:0_m:s", 
-            # "wave_phase_speed:0_m:m_s-1", 
-            "wind_speed:18.4_m:m_s-1", 
-            "wind_direction:18.4_m:degrees", 
-            "angle_between_wind_wave:0_m:degrees", 
-            "bulk_richardson:18.4_m:none",
-            "momentum_flux:18.4_m:m2_s-2",
-            "log_momentum_flux"])
+    # print('config lsit', config['input_columns']['momentum_flux'])
+    # print('type',   type(config['input_columns']['momentum_flux']))
+    # all_data = all_data.dropna(subset=[config['input_columns']['momentum_flux']])
+    input_columns = config['input_columns']['momentum_flux'] + [config['output_columns']['momentum_flux']] + [config['output_columns']['heat_flux']]
+
+    all_data = all_data.dropna(subset=input_columns)
+    print("NaNs dropped successfully.")
+    # all_data = all_data.dropna(subset=[ 
+    #         "zenith:0_m:degrees", 
+    #         "azimuth:0_m:degrees", 
+    #         # "temperature:18.4_m:K", 
+    #         "water_sfc_temperature:0_m:K", 
+    #         "pressure:18.4_m:hPa", 
+    #         "potential_temperature:18.4_m:K", 
+    #         "skin_virtual_potential_temperature:0_m:K", 
+    #         # "mixing_ratio:0_m:g_kg-1", 
+    #         "mixing_ratio:18.4_m:g_kg-1", 
+    #         "relative_humidity:18.4_m:%", 
+    #         # "wave_direction:0_m:degrees", 
+    #         "wave_height:0_m:m", 
+    #         "wave_period:0_m:s", 
+    #         # "wave_phase_speed:0_m:m_s-1", 
+    #         # "wind_speed:18.4_m:m_s-1", 
+    #         # "wind_direction:18.4_m:degrees", 
+    #         "angle_between_wind_wave:0_m:degrees", 
+    #         "bulk_richardson:18.4_m:none",
+    #         "momentum_flux:18.4_m:m2_s-2",
+    #         "log_momentum_flux",
+    #         "wave_phase_speed:0_m:m_s-1",
+    #         "u_wind:18.4_m:m_s-1",
+    #         "v_wind:18.4_m:m_s-1",
+    #         "near_surf_current_u:0_m:m_s-1",
+    #         "near_surf_current_v:0_m:m_s-1",
+    #         "u_wave:0_m:m_s-1",
+    #         "v_wave:0_m:m_s-1"])
 
 
     data = dict()
