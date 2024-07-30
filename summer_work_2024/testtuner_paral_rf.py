@@ -1,5 +1,12 @@
+'''
+exp_name = ?
+python testtuner_paral_rf.py ../config/{exp_name}.yml random_forest momentum_flux -v 2 --project_name rf_tuner_grid_mf --search_type grid
+'''
+
 # import os
 # os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # or '3' to suppress all messagesimport tensorflow as tf
+
+from pathlib import Path
 from tensorflow import keras
 import keras_tuner as kt
 from sklearn.datasets import load_iris
@@ -22,6 +29,8 @@ import pandas as pd
 import os
 
 import warnings
+
+from itertools import product
 
 warnings.filterwarnings('ignore', message='The `lr` argument is deprecated', category=UserWarning)
 
@@ -68,7 +77,7 @@ def build_model(hp, config, args, verbose=0):
             model_config.update({
                 "n_estimators": args.ne,
                 # "max_depth": args.md,
-                "n_leaf_nodes": args.mf,
+                "max_leaf_nodes": args.mf,
                 "max_features": args.mf
             })
 
@@ -345,6 +354,54 @@ def parser():
     args = parser.parse_args()
     return args
 
+def rfTuner(config, args, verbose, search_type, combo=None):
+    
+    '''
+    i have 2 ideas to tune the random forest models
+    idea 1, use scikit learn to create a 'tuner' that will call my existing functions cross_val_score etc to train a model and get a score, take average, return average, save trail, etc, move onto next trial until all trials done, as long as i have the parameters and the score than i am good. that is for a grid search tuner
+    idea 2, for a bayesian tuner, create a new tuner class (ideally my original one would suffice but i did not build it this way originally and i dont want to break anything right now), without the hypermodel or objective args, then override the run_trail funciton to customize how the trial gets run, this will allow me to call cross_val_score inside here, get a score, save it , etc AND still be able to use the hp arguments maybe?, i want to use the kt.bayesianOptimization for the rf tuner
+    '''
+    args.project_name = args.project_name_dir + '/combo_' + str(combo).replace('(','_').replace(')','_').replace(' ', '_').replace(',', '_').replace('.','_')
+    print('projectname: ',args.project_name)
+
+
+    # build a tuner for random forest models here
+    # --
+    # -- 
+    hp = None
+    model = build_model(hp, config, args, verbose=verbose)
+
+
+    kfoldscore = parallel_cross_val_score(hp, config, model,  args, verbose=args.verbose)
+    
+    df = pd.DataFrame({'Trial ID': 0000, 'hyperparameters': {'n_estimators': args.ne, 'max_features': args.mf, 'n_jobs': args.nj, 'max_leaf_nodes': args.ml}, 'Score': kfoldscore, 'Status': 'completed_'})
+
+    if args.verbose >= 2: print(f'Score for current execution: {kfoldscore}')
+
+
+    output_path = f'{args.directory}/{args.project_name}/trial_results_.csv'
+
+    # Check if the CSV file exists to determine whether to write the header
+    file_exists = os.path.exists(output_path)
+
+    # Write the DataFrame to the CSV file, appending if the file exists
+    
+    Path(output_path).mkdir(parents=True, exist_ok=True)
+    df.to_csv(output_path, mode='a', header=not file_exists, index=False)
+
+    output_path = f'{args.directory}/{args.project_name}/../trial_results_.csv'
+    
+    Path(output_path).mkdir(parents=True, exist_ok=True)
+    df.to_csv(output_path, mode='a', header=False, index=False)
+    
+    if args.verbose >= 2:
+        print(f"Saved trial results to {output_path}")
+
+    # at this point we are done and dont actually have to return the tuner
+    # return tuner
+    return 
+
+
 # if __name__ == "__main__":
 args = parser()
 
@@ -384,10 +441,8 @@ es = [True]
 # random forest model parameters
 num_estimators = [100, 50, 200]
 maximum_features = [10, 20, 5]
-num_jobs = [4, 2, 8]
+num_jobs = [4]
 maximum_leaf_nodes = [1024, 516, 2048]
-
-from itertools import product
 
 
 if args.model_type == 'neural_network':
@@ -404,12 +459,13 @@ parallel = args.p #4
 def wrapper(combo):
     if args.model_type == 'neural_network':
         args.hl, args.hn, args.lr, args.es = combo
+        print('in wrapper', args.hl, args.hn, args.lr, args.es)
+        hyperparameter_tuning(config, args, verbose=0, type='grid', combo=combo)
     elif args.model_type == 'random_forest':
         args.ne, args.mf, args.nj, args.ml = combo
+        print('in wrapper', args.ne, args.mf, args.nj, args.ml)
+        rfTuner(config, args, args.verbose, args.search_type, combo=combo)
     
-    # print(f'inside wrapper: {combo}\n{config}\n{args}')
-    print('in wrapper', args.hl, args.hn, args.lr, args.es)
-    hyperparameter_tuning(config, args, verbose=0, type='grid', combo=combo)
 
 if __name__ == '__main__':
     # combo=(1,16,0.01,True)
@@ -417,11 +473,18 @@ if __name__ == '__main__':
     # exit()
     if args.model_type == 'random_forest':
         if args.search_type == 'grid':
-            pass
+            # run in parallel bc why not
+            with mp.Pool(processes=parallel) as pool:
+                # pool.starmap(wrapper, search_space_combinations)
+                pool.map(wrapper, search_space_combinations)
+
         elif args.search_type == 'bay':
-            pass
+            print('bay is not an acceptable argument for a random forest tuner')
+            os.exit()
+
         elif args.search_type == 'bay_ext':
-            pass
+            print('bay_ext is not an acceptable argument for a random forest tuner')
+            os.exit()
 
     elif args.model_type == 'neural_network':
         # Using multiprocessing.Pool to parallelize cross-validation
@@ -436,3 +499,4 @@ if __name__ == '__main__':
             combo = (0,0,0,0)
             hyperparameter_tuning(config, args, verbose=0, type=args.model_type, combo=combo)
         
+

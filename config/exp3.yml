@@ -1,7 +1,7 @@
 #
 #
 #
-file_name: "exp2"
+file_name: "exp3"
 data_file: "../../data/mvco_mlsl_qc.csv"
 out_dir: "../../data/model_output/"
 filter_counter_gradient: 0
@@ -29,8 +29,8 @@ input_columns:
     "wave_phase_speed:0_m:m_s-1",
     # "u_wave:0_m:m_s-1",
     # "v_wave:0_m:m_s-1",
-    'cos_wave_direction:18.4_m:radians',
-    'sin_wave_direction:18.4_m:radians',
+    'cos_wave_direction:0_m:radians',
+    'sin_wave_direction:0_m:radians',
     #"near_surf_current_u:0_m:m_s-1",
     #"near_surf_current_v:0_m:m_s-1",
     "near_surf_current:0_m:m_s-1",
@@ -44,9 +44,9 @@ input_columns:
     # "wind_speed:18.4_m:m_s-1",
     # "wind_direction:18.4_m:degrees",
     "angle_between_wind_wave:0_m:degrees",
-    "bulk_richardson:18.4_m:none"
+    "bulk_richardson:18.4_m:none",
     "dT_dz:18.4_m:K_m-1",
-    "dSpeed_dz:18.4_m:s-1",
+    "dSpeed_dz:18.4_m:s-1"
     # "u_w:18.4_m:m2_s-2",
     # "v_w:18.4_m:m2_s-2",
     # "T_w:18.4_m:C_m_s-2",
@@ -71,7 +71,7 @@ input_columns:
     "pressure:18.4_m:hPa",
     # "sea_surface_pressure:0_m:hPa",
     "relative_humidity:18.4_m:%",
-    "temperature:18.4_m:K",
+    # "temperature:18.4_m:K",
     "potential_temperature:18.4_m:K", 
     "water_sfc_temperature:0_m:K",
     "mixing_ratio:0_m:g_kg-1",
@@ -81,10 +81,10 @@ input_columns:
     "wave_height:0_m:m",
     "wave_period:0_m:s",
     "wave_phase_speed:0_m:m_s-1",
-    "u_wave:0_m:m_s-1",
-    "v_wave:0_m:m_s-1",
-    # 'cos_wave_direction:18.4_m:radians',
-    # 'sin_wave_direction:18.4_m:radians',
+    # "u_wave:0_m:m_s-1",
+    # "v_wave:0_m:m_s-1",
+    'cos_wave_direction:0_m:radians',
+    'sin_wave_direction:0_m:radians',
     #"near_surf_current_u:0_m:m_s-1",
     #"near_surf_current_v:0_m:m_s-1",
     "near_surf_current:0_m:m_s-1",
@@ -95,12 +95,12 @@ input_columns:
     #"v_wind:18.4_m:m_s-1",
     'cos_wind_direction:18.4_m:radians',
     'sin_wind_direction:18.4_m:radians',
-    "wind_speed:18.4_m:m_s-1",
+    # "wind_speed:18.4_m:m_s-1",
     # "wind_direction:18.4_m:degrees",
     "angle_between_wind_wave:0_m:degrees",
     "bulk_richardson:18.4_m:none",
-    # "dT_dz:18.4_m:K_m-1",
-    # "dSpeed_dz:18.4_m:s-1",
+    "dT_dz:18.4_m:K_m-1",
+    "dSpeed_dz:18.4_m:s-1",
     # "u_w:18.4_m:m2_s-2",
     # "v_w:18.4_m:m2_s-2",
     # "T_w:18.4_m:C_m_s-2",

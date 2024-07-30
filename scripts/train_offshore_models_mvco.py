@@ -114,7 +114,7 @@ def main():
                                                     holdout_ratio=config['k_fold_cross_validation']['holdout_ratio'],
                                                     scramble=config['k_fold_cross_validation']['scramble'],
                                                     config=config)#,
-    for a in data:
+    for a in data: # iterates through the train, val, & test, sets to apply the change
         data[a]['momentum_flux:18.4_m:m2_s-2'] = data[a]['momentum_flux:18.4_m:m2_s-2'].replace(-0.0, 0)
 
     #drop_nan=config['input_columns'][0]) # this 0 is assuming the mf & hf models have the same input
@@ -238,9 +238,24 @@ def main():
 #            #
 #            print(f"{mo_predictand_label:30s} {model_metric:20s}: {model_metrics.loc[mo_predictand_label, model_metric]:.15f}")
 #
-#    
+#
+
+    # Compute the error in the MOST estimations of the predictands 
+    # and fill in the model_metrics dataframe with the results
+    for output_type in output_types:
+        # Get the predictand label used in the model_metrics dataframe
+        mo_predictand_label = output_type + "-" + "mo"
+
+        # Compute the different error metrics for each mo estimated predictand 
+        for model_metric in model_metric_types:
+            # Ensure there are no NaNs in your predictions
+            valid_indices = ~np.isnan(data["test"][output_columns[output_type]].values) & ~np.isnan(data['test']['MOST_' + output_columns[output_type].replace('C','K')].values)
+            
+            # Execute the metric function and for this mo index label and metric column
+            # fill in the model_metrics data frame  
+            model_metrics.loc[mo_predictand_label,model_metric] = metrics[model_metric](data["test"][output_columns[output_type]].values[valid_indices], data['test']['MOST_' + output_columns[output_type].replace('C','K')].values[valid_indices])
     ''' ------------------------------------------- END of Calculate the predictands using MOST ------------------------------------------ '''
-    
+
 
 
 
@@ -485,8 +500,8 @@ def main():
                 # Output importance data to csv file
                 #
                 importances[output_type][model_name].to_csv(join(out_dir,
-                                                                 output_type + "_" + model_name + "_importances.csv"),
-                                                            index_label="input")
+                                                                output_type + "_" + model_name + "_importances.csv"),
+                                                                index_label="input")
             
             
             # Unscale the Neural Networks predictions before calculating the metrics
@@ -494,10 +509,11 @@ def main():
                 scaled_test = pd.DataFrame()
 
                 for model_metric in model_metric_types:
-                    scaled_test.loc[:, (predictandLabel_model, model_metric)] = metrics[model_metric](data["test"][output_columns[output_type]].values, model_predictions[predictandLabel_model].values)
+                    # scaled_test.loc[:, (predictandLabel_model, model_metric)] = metrics[model_metric](data["test"][output_columns[output_type]].values, model_predictions[predictandLabel_model].values)
                     model_metrics.loc[predictandLabel_model, model_metric] = metrics[model_metric](data["test"][output_columns[output_type]].values, model_predictions[predictandLabel_model].values)
                     
-                scaled_test.to_csv(join(out_dir, predictandLabel_model + "_scaled_metrics_NN.csv"), index=False)
+                # scaled_test.to_csv(join(out_dir, predictandLabel_model + "_scaled_metrics_NN.csv"), index=False (can also use this: index_label="Model")
+                model_metrics.to_csv(join(out_dir, predictandLabel_model + "_scaled_metrics_NN.csv"), index=False)
                 
                 model_predictions[predictandLabel_model] = model_predictions[predictandLabel_model]  * input_scalers[output_type].scale_[len(input_scalers[output_type].scale_) - 1 ] + input_scalers[output_type].mean_[len(input_scalers[output_type].mean_) - 1 ]
                 

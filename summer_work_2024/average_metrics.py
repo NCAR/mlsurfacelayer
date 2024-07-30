@@ -1,6 +1,7 @@
 import pandas as pd
 import argparse
 import sys
+import os
 import yaml
 
 def calc_mean_metrics_kfold():
@@ -24,12 +25,16 @@ def calc_mean_metrics_kfold():
         # Construct the file path
         file_path = f'{out_dir}{name}/model_QC_--kfold-{num}/surface_layer_model_metrics.csv'
         
-        df = pd.read_csv(file_path)                                     # Read the CSV file into a dataframe
+        if not os.path.exists(file_path):
+            print('file does not exist, cant compute correctly')
+            continue
+        else:
+            df = pd.read_csv(file_path)                                     # Read the CSV file into a dataframe
         
         df['kfold'] = num                                               # Add a column to identify the k-fold
-       
+
         df_list.append(df)                                              # Append the dataframe to the list
-   
+
     combined_df = pd.concat(df_list, ignore_index=True)                 # Concatenate all dataframes in the list into a single dataframe
 
     average_metrics = combined_df.groupby('Model').mean().reset_index() # Compute the average of the metrics across all folds
@@ -38,7 +43,7 @@ def calc_mean_metrics_kfold():
 
 if __name__ == "__main__":
     calc_mean_metrics_kfold()  
-   
+
 
 
 

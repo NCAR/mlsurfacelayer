@@ -27,16 +27,12 @@ input_columns:
 "wind_speed:18.4_m:m_s-1",
 # "wind_direction:18.4_m:degrees",
 # "bulk_richardson:12_m:none"
-"bulk_richardson:18.4_m:none",
+"bulk_richardson:18.4_m:none"
 #"temperature:12_m:K",
 #"potential_temperature:12_m:K",
 #"skin_virtual_potential_temperature:0_m:K",
 #"mixing_ratio:0_m:g_kg-1",
 #"wave_phase_speed:0_m:m_s-1",
-'COS_wind_direction:18.4_m:rad',
-'SIN_wind_direction:18.4_m:rad',
-'COS_wave_direction:18.4_m:rad',
-'SIN_wave_direction:18.4_m:rad'
 ]
   heat_flux: [
 "zenith:0_m:degrees",
@@ -55,17 +51,13 @@ input_columns:
 "wind_speed:18.4_m:m_s-1",
 # "wind_direction:18.4_m:degrees",
 # "bulk_richardson:12_m:none"
-"bulk_richardson:18.4_m:none",
+"bulk_richardson:18.4_m:none"
 #"temperature:12_m:K",
 #"potential_temperature:12_m:K",
 #"skin_virtual_potential_temperature:0_m:K",
 #"mixing_ratio:0_m:g_kg-1",
 #"wave_phase_speed:0_m:m_s-1",
 #"sensible_heat_flux:12_m:W_m-2"
-'COS_wind_direction:18.4_m:rad',
-'SIN_wind_direction:18.4_m:rad',
-'COS_wave_direction:18.4_m:rad',
-'SIN_wave_direction:18.4_m:rad'
 ]
 output_columns:
   momentum_flux: "momentum_flux:18.4_m:m2_s-2" # mf units

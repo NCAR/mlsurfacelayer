@@ -104,8 +104,8 @@ def process_mvco_data(csv_path, out_file, nan_column="", mvco_lon=-70.544, mvco_
                        "wave_phase_speed:0_m:m_s-1",
                        "u_wave:0_m:m_s-1",
                        "v_wave:0_m:m_s-1",
-                       'cos_wave_direction:18.4_m:radians',
-                       'sin_wave_direction:18.4_m:radians',
+                       'cos_wave_direction:0_m:radians',
+                       'sin_wave_direction:0_m:radians',
                        "near_surf_current_u:0_m:m_s-1",
                        "near_surf_current_v:0_m:m_s-1",
                        "near_surf_current:0_m:m_s-1",
@@ -490,8 +490,6 @@ def load_derived_data_random_test_train_val(filename, dropna=False, filter_count
     Returns:
         dict: data divided into input, output, and derived with training and testing sets
     """
-    # this creates a 75, 12.5, 12.5 split
-    
     if config == None: 
         print("Config is None in load_derived_data_random_test_train_val")
         return
@@ -499,54 +497,10 @@ def load_derived_data_random_test_train_val(filename, dropna=False, filter_count
     all_data = pd.read_csv(filename, index_col="Time", parse_dates=["Time"])
     all_data =  all_data[~all_data.index.duplicated(keep='first')]
     
-
-    ''' the mf in the mvco qc data has a factor of -1 applied to it. we need to first undo by applying another factor of -1. Then we will eliminate the negative values bc mf cannot be negative (the MOST computations will always result in a positive value).
-    '''
-    #pd.set_option('display.max_rows', 250)
-    #print('\n\n\nbefore\n',all_data['momentum_flux:18.4_m:m2_s-2'].head(250),'\n')
-    #all_data = all_data[all_data['momentum_flux:18.4_m:m2_s-2'].mul(-1) >= 0]
-
-    #print(all_data["momentum_flux:18.4_m:m2_s-2"].where(-all_data["momentum_flux:18.4_m:m2_s-2"] >0).head(250), '\n')
-    
-    #print('\nafter\n' ,all_data['momentum_flux:18.4_m:m2_s-2'].head(250),'\n\n\n')
-    #pd.reset_option('display.max_rows')    
-
-    # print('config lsit', config['input_columns']['momentum_flux'])
-    # print('type',   type(config['input_columns']['momentum_flux']))
-    # all_data = all_data.dropna(subset=[config['input_columns']['momentum_flux']])
-    input_columns = config['input_columns']['momentum_flux'] + [config['output_columns']['momentum_flux']] + [config['output_columns']['heat_flux']]
+    input_columns = config['input_columns']['momentum_flux'] + config['input_columns']['heat_flux'] + [config['output_columns']['momentum_flux']] + [config['output_columns']['heat_flux']]
 
     all_data = all_data.dropna(subset=input_columns)
     print("NaNs dropped successfully.")
-    # all_data = all_data.dropna(subset=[ 
-    #         "zenith:0_m:degrees", 
-    #         "azimuth:0_m:degrees", 
-    #         # "temperature:18.4_m:K", 
-    #         "water_sfc_temperature:0_m:K", 
-    #         "pressure:18.4_m:hPa", 
-    #         "potential_temperature:18.4_m:K", 
-    #         "skin_virtual_potential_temperature:0_m:K", 
-    #         # "mixing_ratio:0_m:g_kg-1", 
-    #         "mixing_ratio:18.4_m:g_kg-1", 
-    #         "relative_humidity:18.4_m:%", 
-    #         # "wave_direction:0_m:degrees", 
-    #         "wave_height:0_m:m", 
-    #         "wave_period:0_m:s", 
-    #         # "wave_phase_speed:0_m:m_s-1", 
-    #         # "wind_speed:18.4_m:m_s-1", 
-    #         # "wind_direction:18.4_m:degrees", 
-    #         "angle_between_wind_wave:0_m:degrees", 
-    #         "bulk_richardson:18.4_m:none",
-    #         "momentum_flux:18.4_m:m2_s-2",
-    #         "log_momentum_flux",
-    #         "wave_phase_speed:0_m:m_s-1",
-    #         "u_wind:18.4_m:m_s-1",
-    #         "v_wind:18.4_m:m_s-1",
-    #         "near_surf_current_u:0_m:m_s-1",
-    #         "near_surf_current_v:0_m:m_s-1",
-    #         "u_wave:0_m:m_s-1",
-    #         "v_wave:0_m:m_s-1"])
-
 
     data = dict()
 
