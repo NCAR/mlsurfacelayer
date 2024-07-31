@@ -51,7 +51,7 @@ def draw_loss(cut, direc, show=False, save=True, save_path=None, model_types=Non
     plt.close()
     print("\nfinished loss")
 
-def draw_mf(df, show=False, save=True, save_path=None, model_types=None, save_eps=False, pred_=None, ex_pred_=None):
+def draw_mf(df, show=False, save=True, save_path=None, model_types=None, save_eps=False, pred_=None, ex_pred_=None, algo_list=None):
     # pred1 = 'momentum_flux'
     # ex_pred1 = "momentum_flux:18.4_m:m2_s-2"
 
@@ -76,8 +76,11 @@ def draw_mf(df, show=False, save=True, save_path=None, model_types=None, save_ep
     xStr = ex_pred_
     yStr = []
 
-    yStr.append(pred_ + '-neural_network')
-    yStr.append(pred_ + '-random_forest')
+    
+    for algo in algo_list:
+        yStr.append(f'{pred_}-{algo}')
+    # yStr.append(pred_ + '-neural_network')
+    # yStr.append(pred_ + '-random_forest')
     
     yStr.append(mo_version + ex_pred_)
     yStr.append('MOST_chopped_' + ex_pred_)
@@ -89,43 +92,73 @@ def draw_mf(df, show=False, save=True, save_path=None, model_types=None, save_ep
 
     #df2 =  df.loc[df[predictand1 + mo_version2].isna() == False]
 
-    fig, ax = plt.subplots(3,2, figsize = (20,20))
-    ax = ax.flat
-    for i in range (0,len(ax)):
-        if i >= len(yStr): continue
+    def chop_after_flux(s):
+        return s.split('flux')[0] + 'flux' if 'flux' in s else s
+
+    for i, y in enumerate(yStr):
+        fig, ax = plt.subplots(figsize=(10, 10))  # Create a new figure for each plot
 
         x = df2[xStr]
-        y = df2[yStr[i]]
+        y_data = df2[y]
 
-        xy = np.vstack([x,y])
+        xy = np.vstack([x, y_data])
         z = gaussian_kde(xy)(xy)
 
-        im = ax[i].scatter(x,y,  c=z )
+        im = ax.scatter(x, y_data, c=z, cmap='plasma')
 
-        # ax[i].set_xlim(0,1)
-        # ax[i].set_ylim(0,1)
+        ax.set_xlim(-0.1, 1)
+        ax.set_ylim(-0.1, 1)
+
+        fig.colorbar(im, ax=ax)
+        titleStr = f"y = {y} x = measured {xStr}"
+        ax.set_title(titleStr)
+        ax.plot(x, x)
+
+        fig.tight_layout()
+        if show: plt.show()
+        if save_eps: plt.savefig(f"{save_path}/mf_scatter_{i}_{chop_after_flux(y)}.eps", format='eps')
+        if save: plt.savefig(f"{save_path}/mf_scatter_{i}_{chop_after_flux(y)}.png", format='png')
+
+        plt.close()
+
+
+    # fig, ax = plt.subplots(3,2, figsize = (20,20))
+    # ax = ax.flat
+    # for i in range (0,len(ax)):
+    #     if i >= len(yStr): continue
+
+    #     x = df2[xStr]
+    #     y = df2[yStr[i]]
+
+    #     xy = np.vstack([x,y])
+    #     z = gaussian_kde(xy)(xy)
+
+    #     im = ax[i].scatter(x,y,  c=z )
+
+    #     # ax[i].set_xlim(0,1)
+    #     # ax[i].set_ylim(0,1)
         
-        ax[i].set_xlim(-.1,1)
-        ax[i].set_ylim(-.1,1)
+    #     ax[i].set_xlim(-.1,1)
+    #     ax[i].set_ylim(-.1,1)
 
-        fig.colorbar(im, ax = ax[i])
-        titleStr = "y = {0} x = measured {1}". format(yStr[i], xStr)
-        ax[i].set_title(titleStr )
-        # m, b = np.polyfit(x, y, 1)
-        ax[i].plot(x, x)
+    #     fig.colorbar(im, ax = ax[i])
+    #     titleStr = "y = {0} x = measured {1}". format(yStr[i], xStr)
+    #     ax[i].set_title(titleStr )
+    #     # m, b = np.polyfit(x, y, 1)
+    #     ax[i].plot(x, x)
 
     
-    fig.tight_layout()
-    if show: plt.show()
-    if save_eps: plt.savefig(save_path + '/mf_scatter.eps', format='eps')
-    if save: plt.savefig(save_path + '/mf_scatter.png', format='png')
+    # fig.tight_layout()
+    # if show: plt.show()
+    # if save_eps: plt.savefig(save_path + '/mf_scatter.eps', format='eps')
+    # if save: plt.savefig(save_path + '/mf_scatter.png', format='png')
 
-    plt.close()
+    # plt.close()
     print("\nfinished mf")
 
-def draw_hf(df, show=False, save=True, save_path=None, save_eps=False):
-    pred1 = 'momentum_flux'
-    ex_pred1 = "momentum_flux:18.4_m:m2_s-2"
+def draw_hf(df, show=False, save=True, save_path=None, save_eps=False, algo_list=None):
+    # pred1 = 'momentum_flux'
+    # ex_pred1 = "momentum_flux:18.4_m:m2_s-2"
 
     pred2 = 'heat_flux'
     ex_pred2 = 'heat_flux:18.4_m:degrees_C_m_s-1' # degrees celsius , meters per second
@@ -140,8 +173,10 @@ def draw_hf(df, show=False, save=True, save_path=None, save_eps=False):
     xStr = ex_pred2
     yStr = []
 
-    yStr.append(pred2+ '-neural_network')
-    yStr.append(pred2+ '-random_forest')
+    for algo in algo_list:
+        yStr.append(f'{pred2}-{algo}')
+    # yStr.append(pred2+ '-neural_network')
+    # yStr.append(pred2+ '-random_forest')
     
     yStr.append(mo_version + ex_pred2.replace('C','K'))
     yStr.append('MOST_chopped_' + ex_pred2.replace('C','K'))
@@ -386,17 +421,9 @@ def main():
     pred_list = config['output_types']
     ex_pred_list = config['output_columns']
 
-    algorithm_list = config['model_config'].keys
+    algorithm_list = str(config['model_config'].keys)
 
-    # pred1 = 'momentum_flux'
-    # ex_pred1 = "momentum_flux:18.4_m:m2_s-2"
-
-    # pred2 = 'heat_flux'
-    # ex_pred2 = 'heat_flux:18.4_m:degrees_C_m_s-1' # degrees celsius , meters per second
-    
-    mo_version = 'MOST_'
-    #mo_version = '-mo_branko'
-    #mo_version2 = '-mo_alternate'
+    # mo_version = 'MOST_'
 
     num_folds = config['k_fold_cross_validation']['N']
     # model options above ---------------------------------------------------
@@ -429,17 +456,11 @@ def main():
         combined_df = pd.concat(dfs)
         if args.v >= 1: print(f'finished combining {len(combined_df)}')
         
-        sort_list = [True, False]
-        for algo, predictand, sort in product(algorithm_list, pred_list, sort_list):
+        for algo, predictand, sort in product(algorithm_list, pred_list, [True, False]):
             average_importances(base_directory, f"{predictand}_{algo}", sort=sort, show=args.show, save=args.save, save_path=base_directory)
         print("Averaged Feature Importances  created successfully.")
 
-        # sort = False
-        # for algo, predictand in product(algorithm_list, pred_list):
-        #     average_importances(base_directory, f"{predictand}_{algo}", sort=sort, show=args.show, save=args.save, save_path=base_directory)
-        # print("Averaged Feature Importances  created successfully.")
-        
-        draw_hf(combined_df, show=args.show, save=args.save, save_path=base_directory)
+        draw_hf(combined_df, show=args.show, save=args.save, save_path=base_directory, algo_list=algorithm_list)
         draw_mf(combined_df, show=args.show, save=args.save, save_path=base_directory)
         print("Combined DataFrame created successfully.")
 
@@ -448,53 +469,55 @@ def main():
         num = config['k_fold_cross_validation']['k']
         
         sort_list = [True, False]
-        for algo, predictand, sort in product(algorithm_list, pred_list, sort_list):
+        for algo, predictand, sort in list(product(algorithm_list, pred_list, sort_list)):
             plot_feature_importance(f"{directory}", f"{predictand}_{algo}", sort=sort, show=args.show, save=args.save, save_path=directory)
-            # plot_feature_importance(f"{directory}", f"{predictand}_neural_network", sort=sort, show=args.show, save=args.save, save_path=directory)
-            # plot_feature_importance(f"{directory}", f"{predictand}_random_forest", sort=sort, show=args.show, save=args.save, save_path=directory)
-        print('finished sorted single feature importances')
-
-        # sort = False
-        # for predictand in pred_list:
-        #     plot_feature_importance(f"{directory}", f"{predictand}_neural_network", sort=sort, show=args.show, save=args.save, save_path=directory)
-        #     plot_feature_importance(f"{directory}", f"{predictand}_random_forest", sort=sort, show=args.show, save=args.save, save_path=directory)
-        # print('finished unsorted single feature importances')
+        print('finished single feature importances')
 
         pred = pd.read_csv(directory + "/surface_layer_model_predictions.csv")
         pred['Time'] = pd.to_datetime(pred['Time'])
         pred = pred.sort_values('Time', ascending=True)
         pred.index = pred['Time'] 
 
-        draw_loss(0, directory, show=args.show, save=args.save, save_path=directory, model_types=pred_list)
-        draw_loss(20, directory, show=args.show, save=args.save, save_path=directory, model_types=pred_list)
+        for cut in [0, 20]:
+            draw_loss(cut, directory, show=args.show, save=args.save, save_path=directory, model_types=pred_list)
 
         draw_hf(pred, show=args.show, save=args.save, save_path=directory)
         draw_mf(pred, show=args.show, save=args.save, save_path=directory)
+
         for i in range(len(pred_list)):
             draw_group_time_series(pred, ex_pred_list[i], pred_list[i], show=args.show, save=args.save, save_path=directory)
-        # draw_group_time_series(pred, ex_pred2, pred2, show=args.show, save=args.save, save_path=directory)
         print("\nfinished drawing\n")
 
 if __name__ == "__main__":
-    # main()
-    
-    args = parser()
-    
-    with open(args.config, "r") as config_file:
-        config = yaml.load(config_file,Loader=yaml.FullLoader)
-    
-    directory = config['out_dir']
-    args.save_file = directory
-    
-    # model options below ---------------------------------------------------
-    pred_list = config['output_types']
-    ex_pred_list = config['output_columns']
+    main()
 
-    algorithm_list = config['model_config'].keys
+
+
+
+    # for algo, predictand, sort in product(['a', 'b'], ['1', '2'], ['True', 'False']):
+    #     print(algo, predictand, sort)
     
-    pred = pd.read_csv(directory + "/surface_layer_model_predictions.csv")
-    pred['Time'] = pd.to_datetime(pred['Time'])
-    pred = pred.sort_values('Time', ascending=True)
-    pred.index = pred['Time'] 
+
+
+
+
+    # args = parser()
     
-    draw_hf(pred, show=args.show, save=args.save, save_path=directory)
+    # with open(args.config, "r") as config_file:
+    #     config = yaml.load(config_file,Loader=yaml.FullLoader)
+    
+    # directory = config['out_dir']
+    # args.save_file = directory
+    
+    # # model options below ---------------------------------------------------
+    # pred_list = config['output_types']
+    # ex_pred_list = config['output_columns']
+
+    # algorithm_list = config['model_config'].keys
+    
+    # pred = pd.read_csv(directory + "/surface_layer_model_predictions.csv")
+    # pred['Time'] = pd.to_datetime(pred['Time'])
+    # pred = pred.sort_values('Time', ascending=True)
+    # pred.index = pred['Time'] 
+    
+    # draw_hf(pred, show=args.show, save=args.save, save_path=directory)

@@ -116,6 +116,7 @@ def main():
                                                     config=config)#,
     for a in data: # iterates through the train, val, & test, sets to apply the change
         data[a]['momentum_flux:18.4_m:m2_s-2'] = data[a]['momentum_flux:18.4_m:m2_s-2'].replace(-0.0, 0)
+        data[a].to_csv(join(out_dir, f"data_from_{a}_split.csv"), index_label="Time")
 
     #drop_nan=config['input_columns'][0]) # this 0 is assuming the mf & hf models have the same input
 
