@@ -8,26 +8,6 @@ import datetime
 from sklearn.utils import shuffle
 
 '''
-This file will process the QC dataset, so that the inputs to the ML model are part non-QC and part QC variables.
-/glade/work/brummet/Oracle/data/MVCO/processed/qced_MVCO_ocn_sonic_vaisala_QC.20010619-20160610.outer_join.csv
-# Vars of interest
-DateTime,
-wave_height:0_m:m, wave_period:0_m:deg, wave_dir:0_m:deg, 
-w:18.4_m:m/s, 
-uv_3D1:18.4_m:m2/s2, uw_3D1:18.4_m:m2/s2, vw_3D1:18.4_m:m2/s2, wT_3D1:18.4_m:m/s K, 
-
-# wind components
-u1_QC, v1_QC,
-u2_QC, v2_QC,
-
-# UW covariance ? (reported as momentum flux, MVCO QC paper
-# references conversion of u,v to vector in direction of wind
-# which could explain )
-UpWpBar1_QC, UpWpBar2_QC,
-
-# Heat flux
-WpTpBar1_QC, WpTpBar2_QC,
- 
 # air temp, humidity, pressure at 18.4m  
 AT_QC, RH_QC, P_QC, 
 
@@ -92,9 +72,10 @@ def process_mvco_data(csv_path, out_file, nan_column="", mvco_lon=-70.544, mvco_
                        "pressure:18.4_m:hPa",
                        "sea_surface_pressure:0_m:hPa",
                        "relative_humidity:18.4_m:%",
+                       "water_sfc_temperature:0_m:K",
                        "temperature:18.4_m:K",
                        "potential_temperature:18.4_m:K", 
-                       "water_sfc_temperature:0_m:K",
+                       "potential_temperature:0_m:K",
                        "mixing_ratio:0_m:g_kg-1",
                        "mixing_ratio:18.4_m:g_kg-1",
                        "skin_virtual_potential_temperature:0_m:K",
@@ -122,6 +103,8 @@ def process_mvco_data(csv_path, out_file, nan_column="", mvco_lon=-70.544, mvco_
                        "bulk_richardson:18.4_m:none",
                        "dT_dz:18.4_m:K_m-1",
                        "dSpeed_dz:18.4_m:s-1",
+                       "dPotTemp_dz:18.4_m:K_m-1",
+                       "dMixingRatio_dz:18.4_m:g_kg-1_m-1",
                        "u_w:18.4_m:m2_s-2",
                        "v_w:18.4_m:m2_s-2",
                        "T_w:18.4_m:C_m_s-2",
@@ -177,6 +160,13 @@ def process_mvco_data(csv_path, out_file, nan_column="", mvco_lon=-70.544, mvco_
     # RH
     # 
     derived_data["relative_humidity:18.4_m:%"]=  raw_data['RH_QC'] 
+
+    #                  
+    # Water surface temperature
+    #                  
+    if verbose == 2: print("Water surface temperature")
+    derived_data["water_sfc_temperature:0_m:K"] = celsius_to_kelvin(raw_data["SST_QC"])
+
     
     #    
     # Temperature  
@@ -189,13 +179,9 @@ def process_mvco_data(csv_path, out_file, nan_column="", mvco_lon=-70.544, mvco_
     #
     if verbose == 2: print("Potential temperature")
     derived_data["potential_temperature:18.4_m:K"] = potential_temperature(derived_data["temperature:18.4_m:K"], derived_data["pressure:18.4_m:hPa"])
+    derived_data["potential_temperature:0_m:K"] = potential_temperature(derived_data["water_sfc_temperature:0_m:K"], derived_data["sea_surface_pressure:0_m:hPa"])
+    derived_data["dPotTemp_dz:18.4_m:K_m-1"] = (derived_data["potential_temperature:18.4_m:K"] - derived_data["potential_temperature:0_m:K"])/18.4
 
-
-    #
-    # Water surface temperature
-    #
-    if verbose == 2: print("Water surface temperature")
-    derived_data["water_sfc_temperature:0_m:K"] = celsius_to_kelvin(raw_data["SST_QC"]) 
 
     #
     # Mixing ratios
@@ -203,6 +189,8 @@ def process_mvco_data(csv_path, out_file, nan_column="", mvco_lon=-70.544, mvco_
     if verbose == 2: print("Skin mixing ratio")
     derived_data["mixing_ratio:0_m:g_kg-1"] = mixing_ratio(raw_data["SST_QC"], 100, derived_data["sea_surface_pressure:0_m:hPa"]) 
     derived_data["mixing_ratio:18.4_m:g_kg-1"] = mixing_ratio( derived_data["temperature:18.4_m:K"]-273, derived_data["relative_humidity:18.4_m:%"], derived_data["pressure:18.4_m:hPa"])
+    derived_data["dMixingRatio_dz:18.4_m:g_kg-1_m-1"] =  (derived_data["mixing_ratio:18.4_m:g_kg-1"] - derived_data["mixing_ratio:0_m:g_kg-1"])/18.4
+  
 
     #
     # skin virtual potential temperature
@@ -490,6 +478,8 @@ def load_derived_data_random_test_train_val(filename, dropna=False, filter_count
     Returns:
         dict: data divided into input, output, and derived with training and testing sets
     """
+    # this creates a 75, 12.5, 12.5 split
+    
     if config == None: 
         print("Config is None in load_derived_data_random_test_train_val")
         return
@@ -497,10 +487,57 @@ def load_derived_data_random_test_train_val(filename, dropna=False, filter_count
     all_data = pd.read_csv(filename, index_col="Time", parse_dates=["Time"])
     all_data =  all_data[~all_data.index.duplicated(keep='first')]
     
+
+    ''' the mf in the mvco qc data has a factor of -1 applied to it. we need to first undo by applying another factor of -1. Then we will eliminate the negative values bc mf cannot be negative (the MOST computations will always result in a positive value).
+    '''
+    #pd.set_option('display.max_rows', 250)
+    #print('\n\n\nbefore\n',all_data['momentum_flux:18.4_m:m2_s-2'].head(250),'\n')
+    #all_data = all_data[all_data['momentum_flux:18.4_m:m2_s-2'].mul(-1) >= 0]
+
+    #print(all_data["momentum_flux:18.4_m:m2_s-2"].where(-all_data["momentum_flux:18.4_m:m2_s-2"] >0).head(250), '\n')
+    
+    #print('\nafter\n' ,all_data['momentum_flux:18.4_m:m2_s-2'].head(250),'\n\n\n')
+    #pd.reset_option('display.max_rows')    
+
+    # print('config lsit', config['input_columns']['momentum_flux'])
+    # print('type',   type(config['input_columns']['momentum_flux']))
+    # all_data = all_data.dropna(subset=[config['input_columns']['momentum_flux']])
     input_columns = config['input_columns']['momentum_flux'] + config['input_columns']['heat_flux'] + [config['output_columns']['momentum_flux']] + [config['output_columns']['heat_flux']]
 
+    print(f"inputs for mf:{config['input_columns']['momentum_flux']}, inputs for hf:{config['input_columns']['heat_flux']}, mf output:{config['output_columns']['momentum_flux']}, hf output:{config['output_columns']['heat_flux']}")
+    print(f'input_columns_together:{input_columns}')
+    
     all_data = all_data.dropna(subset=input_columns)
     print("NaNs dropped successfully.")
+    # all_data = all_data.dropna(subset=[ 
+    #         "zenith:0_m:degrees", 
+    #         "azimuth:0_m:degrees", 
+    #         # "temperature:18.4_m:K", 
+    #         "water_sfc_temperature:0_m:K", 
+    #         "pressure:18.4_m:hPa", 
+    #         "potential_temperature:18.4_m:K", 
+    #         "skin_virtual_potential_temperature:0_m:K", 
+    #         # "mixing_ratio:0_m:g_kg-1", 
+    #         "mixing_ratio:18.4_m:g_kg-1", 
+    #         "relative_humidity:18.4_m:%", 
+    #         # "wave_direction:0_m:degrees", 
+    #         "wave_height:0_m:m", 
+    #         "wave_period:0_m:s", 
+    #         # "wave_phase_speed:0_m:m_s-1", 
+    #         # "wind_speed:18.4_m:m_s-1", 
+    #         # "wind_direction:18.4_m:degrees", 
+    #         "angle_between_wind_wave:0_m:degrees", 
+    #         "bulk_richardson:18.4_m:none",
+    #         "momentum_flux:18.4_m:m2_s-2",
+    #         "log_momentum_flux",
+    #         "wave_phase_speed:0_m:m_s-1",
+    #         "u_wind:18.4_m:m_s-1",
+    #         "v_wind:18.4_m:m_s-1",
+    #         "near_surf_current_u:0_m:m_s-1",
+    #         "near_surf_current_v:0_m:m_s-1",
+    #         "u_wave:0_m:m_s-1",
+    #         "v_wave:0_m:m_s-1"])
+
 
     data = dict()
 
@@ -537,7 +574,7 @@ def load_derived_data_random_test_train_val(filename, dropna=False, filter_count
         all_data = all_data.iloc[holdout_size:]
 
         # Save holdout set to CSV
-        data["holdout"].to_csv("../../data/mvco_mlsl_holdout.csv", na_rep='?')
+        #data["holdout"].to_csv("../../data/mvco_mlsl_holdout.csv", na_rep='?')
 
     if devVar == "kfold":
         df_list = split_dataframe(all_data, N)              # into N smaller DataFrames

@@ -1,0 +1,68 @@
+#
+#
+#
+file_name: "flip_sfc_xfer"
+data_file: "/glade/campaign/ral/wsap/oracleMLSL/data/flip_mlsl.csv"
+out_dir: "../../data/model_output/"
+filter_counter_gradient: 0
+train_test_split_date: "2010-10-01"
+output_types: ['momentum_flux', 'heat_flux']
+model_metric_types: ["mean_squared_error", "mean_absolute_error", "mean_error","pearson_r2"]
+input_columns:
+  momentum_flux:
+    [
+    "pressure:0_m:hPa",
+    "mixing_ratio:0_m:g_kg-1",
+    "wave_height:0_m:m",
+    "wave_period:0_m:s",
+    "wave_phase_speed:0_m:m_s-1",
+    "dSpeed_dz:12.35_m:s-1",
+    "dPotTemp_dz:12.35_m:K_m-1",
+    "dMixingRatio_dz:12.35_m:g_kg-1_m-1"
+    ]
+  heat_flux: 
+    [
+    "GHI:0_m:W_m-2",
+    "pressure:0_m:hPa",
+    "mixing_ratio:0_m:g_kg-1",
+    "wave_height:0_m:m",
+    "wave_period:0_m:s",
+    "wave_phase_speed:0_m:m_s-1",
+    "dSpeed_dz:12.35_m:s-1",
+    "dPotTemp_dz:12.35_m:K_m-1",
+    "dMixingRatio_dz:12.35_m:g_kg-1_m-1"
+    ]
+output_columns:
+  momentum_flux: "momentum_flux:13.73_m:m2_s-2" # mf units
+  heat_flux: "heat_flux:13.73_m:K_m_s-1" # hf units
+  
+derived_columns: [
+"MOST_momentum_flux:13.73_m:m2_s-2",
+"MOST_heat_flux:13.73_m:K_m_s-1"
+]
+stability_column: "bulk_richardson:12.35_m:none"
+
+k_fold_cross_validation:
+  devVar: 'kfold'
+  N: 10 
+  k: 0
+  holdout_ratio: 0.1
+  scramble: False
+
+model_config:
+  random_forest:
+    n_estimators: 500 
+    max_features: 10 
+    n_jobs: 4
+    max_leaf_nodes: 128 
+  neural_network:
+    hidden_layers: 3 
+    hidden_neurons: 16 
+    batch_size: 32
+    epochs: 100
+    lr: 0.001
+    activation: relu 
+    l2_weight: 0.0
+    min_delta: 0.01
+    patience: 25
+    early_stop: True 

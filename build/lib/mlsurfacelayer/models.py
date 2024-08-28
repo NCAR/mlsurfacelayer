@@ -70,6 +70,7 @@ class DenseNeuralNetwork(object):
         self.min_delta = min_delta
         self.patience = patience
         self.early_stop = early_stop
+        self.isBuilt = False
 
     def build_neural_network(self, inputs, outputs):
         """
@@ -100,7 +101,7 @@ class DenseNeuralNetwork(object):
         # Attach the custom fit method to the model
         self.model.original_fit = self.model.fit
         self.model.fit = self.fit.__get__(self.model)
-
+        self.isBuilt = True
         return self.model
 
     def fit(self, x, y, x_val, y_val):
@@ -123,7 +124,8 @@ class DenseNeuralNetwork(object):
             outputs = y.shape[1]
         if self.classifier:
             outputs = np.unique(y).size
-        self.build_neural_network(inputs, outputs)
+        if not self.isBuilt:
+           self.build_neural_network(inputs, outputs)
         
         if self.classifier and self.early_stop:
             self.y_labels = np.unique(y)

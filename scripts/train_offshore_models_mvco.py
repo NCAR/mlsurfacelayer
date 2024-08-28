@@ -102,6 +102,12 @@ def main():
         filter_counter_gradient = False
 
     #
+    # Create the output directory for models and results if needed
+    #
+    if not exists(out_dir):
+        makedirs(out_dir)
+
+    #
     # Test and train data loaded.
     # Testing data specified by randomly chosen week within each month of data
     #
@@ -114,17 +120,16 @@ def main():
                                                     holdout_ratio=config['k_fold_cross_validation']['holdout_ratio'],
                                                     scramble=config['k_fold_cross_validation']['scramble'],
                                                     config=config)#,
-    for a in data: # iterates through the train, val, & test, sets to apply the change
-        data[a]['momentum_flux:18.4_m:m2_s-2'] = data[a]['momentum_flux:18.4_m:m2_s-2'].replace(-0.0, 0)
-        data[a].to_csv(join(out_dir, f"data_from_{a}_split.csv"), index_label="Time")
-
+    for a in data:
+    #    #data[a]['momentum_flux:18.4_m:m2_s-2'] = data[a]['momentum_flux:18.4_m:m2_s-2'].replace(-0.0, 0)
+        data[a].to_csv(join(out_dir, f'data_from_{a}_split.csv'), index_label='Time')
     #drop_nan=config['input_columns'][0]) # this 0 is assuming the mf & hf models have the same input
 
     # tempdf = data['test']
     # data['test'] = data['validate']
     # data['validate'] = tempdf
 
-    model_objects = dict()
+    #model_objects = dict()
 
     #
     # Create a data frame for the predictions and the derived or predictor variables
@@ -171,78 +176,20 @@ def main():
     model_metrics = pd.DataFrame(0, index=pred_columns, columns=model_metric_types,
                                  dtype=np.float32)
     print(model_metrics)
-
-    #
-    # Create the output directory for models and results if needed
-    #
-    if not exists(out_dir):
-        makedirs(out_dir)
-
+    
     # Save the YAML config used for this model to the results folder (allows us to look at the params used)
     with open(out_dir + '/config_info.yml', 'w') as file:
         yaml.dump(config, file) 
 
-    ''' ---------------------------------------------- Calculate the predictands using MOST ---------------------------------------------- '''
-#    
-#    print("Monin Obukhov estimations of predictands:")
-#
-#    #
-#    # Loop through the test data samples and call the monin obukhov code with
-#    # predictors needed for the calculation
-#    #
-#    for d, date in enumerate(data["test"].index):
-#        if d % 1000 == 0: print('computing MOST: ',d,date)
-#        mo_out = computeMOSTfluxes(data["test"].loc[date, "bulk_richardson:18.4_m:none"].astype(float), #mix of both qc and non-qc variables
-#                                    data["test"].loc[date, "skin_virtual_potential_temperature:0_m:K"].astype(float), #qc
-#                                    data["test"].loc[date, "water_sfc_temperature:0_m:K"].astype(float), #qc
-#                                    data["test"].loc[date, "wind_speed:18.4_m:m_s-1"].astype(float), #non-qc
-#                                    data["test"].loc[date, "wave_height:0_m:m"].astype(float), #non-qc
-#                                    data["test"].loc[date, "potential_temperature:18.4_m:K"].astype(float), #qc
-#                                    data["test"].loc[date, "wave_phase_speed:0_m:m_s-1"].astype(float), #non-qc
-#                                    18.4)
-#        # print('mo_branko', mo_out)
-#        model_predictions.loc[date, "momentum_flux-mo"] = mo_out[0]
-#        model_predictions.loc[date, "heat_flux-mo"] = mo_out[1]
-#        # model_predictions.loc[date, "kin_heat_flux-mo_branko"] = mo_out[0]*mo_out[1] 
-#    
-#    #
-#    # Compute the error in the MOST estimations of the predictands 
-#    # and fill in the model_metrics dataframe with the results
-#    # 
-#    for output_type in output_types:
-#        #
-#        # Get the predictand label used in the model_metrics dataframe
-#        #
-#        mo_predictand_label = output_type + "-" + "mo"
-#        # mo_predictand_label = output_type + "-" + "mo_branko"
-#        # mo_predictand_label2 = output_type + "-" + "mo_alternate"
-#        # mo_predictand_label = output_type
-#        print( "label", mo_predictand_label)
-#
-#        #
-#        # Compute the different error metrics for each mo estimated predictand 
-#        #
-#        for model_metric in model_metric_types:
-#            # Ensure there are no NaNs in your predictions
-#            valid_indices = ~np.isnan(data["test"][output_columns[output_type]].values) & ~np.isnan(model_predictions[mo_predictand_label].values)
-#
-#            print('length of most comps valid cases (success converging)')
-#            print(len(valid_indices))
-#
-#            #
-#            # Execute the metric function and for this mo index label and metric column
-#            # fill in the model_metrics data frame  
-#            #
-#            model_metrics.loc[mo_predictand_label,model_metric] = metrics[model_metric](data["test"][output_columns[output_type]].values[valid_indices], model_predictions[mo_predictand_label].values[valid_indices])
-#            #
-#            # Output results
-#            #
-#            print(f"{mo_predictand_label:30s} {model_metric:20s}: {model_metrics.loc[mo_predictand_label, model_metric]:.15f}")
-#
-#
-
+     
     # Compute the error in the MOST estimations of the predictands 
     # and fill in the model_metrics dataframe with the results
+    # MOST estimations were calculated during data ingest and included
+    # as unused columns in the training data and have an expected label
+    # which is visable a few lines down.
+    # note the replace('C','K').  some flux units are in Celsius and some Kelvin
+    # MVCO was Celcius. 
+    # 
     for output_type in output_types:
         # Get the predictand label used in the model_metrics dataframe
         mo_predictand_label = output_type + "-" + "mo"
@@ -255,10 +202,6 @@ def main():
             # Execute the metric function and for this mo index label and metric column
             # fill in the model_metrics data frame  
             model_metrics.loc[mo_predictand_label,model_metric] = metrics[model_metric](data["test"][output_columns[output_type]].values[valid_indices], data['test']['MOST_' + output_columns[output_type].replace('C','K')].values[valid_indices])
-    ''' ------------------------------------------- END of Calculate the predictands using MOST ------------------------------------------ '''
-
-
-
 
 
 
@@ -501,8 +444,8 @@ def main():
                 # Output importance data to csv file
                 #
                 importances[output_type][model_name].to_csv(join(out_dir,
-                                                                output_type + "_" + model_name + "_importances.csv"),
-                                                                index_label="input")
+                                                                 output_type + "_" + model_name + "_importances.csv"),
+                                                            index_label="input")
             
             
             # Unscale the Neural Networks predictions before calculating the metrics
@@ -510,11 +453,10 @@ def main():
                 scaled_test = pd.DataFrame()
 
                 for model_metric in model_metric_types:
-                    # scaled_test.loc[:, (predictandLabel_model, model_metric)] = metrics[model_metric](data["test"][output_columns[output_type]].values, model_predictions[predictandLabel_model].values)
+                    scaled_test.loc[:, (predictandLabel_model, model_metric)] = metrics[model_metric](data["test"][output_columns[output_type]].values, model_predictions[predictandLabel_model].values)
                     model_metrics.loc[predictandLabel_model, model_metric] = metrics[model_metric](data["test"][output_columns[output_type]].values, model_predictions[predictandLabel_model].values)
                     
-                # scaled_test.to_csv(join(out_dir, predictandLabel_model + "_scaled_metrics_NN.csv"), index=False (can also use this: index_label="Model")
-                model_metrics.to_csv(join(out_dir, predictandLabel_model + "_scaled_metrics_NN.csv"), index=False)
+                scaled_test.to_csv(join(out_dir, predictandLabel_model + "_scaled_metrics_NN.csv"), index=False)
                 
                 model_predictions[predictandLabel_model] = model_predictions[predictandLabel_model]  * input_scalers[output_type].scale_[len(input_scalers[output_type].scale_) - 1 ] + input_scalers[output_type].mean_[len(input_scalers[output_type].mean_) - 1 ]
                 
