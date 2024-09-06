@@ -1,0 +1,52 @@
+#!/bin/bash
+#PBS -N noDir_hf_bay_nn
+#PBS -A NWSA0002
+#
+# Each array subjob will be assigned a single CPU with 4 GB of memory
+###PBS -l select=1:ncpus=1:ngpus=1:mem=4GB
+#PBS -l select=1:ncpus=4:mem=16GB
+#PBS -l walltime=24:00:00
+#PBS -q casper
+#
+# Specify that the GPUs will be V100s
+###PBS -l gpu_type=v100
+#
+#PBS -M dettling@ucar.edu
+#
+##PBS -o "${TMPDIR}/tuner_test_pbs_out_${PBS_ARRAY_INDEX}_pbs.txt"
+##PBS -J 0-4
+##PBS -j oe
+##PBS -r y 
+#export TMPDIR=../../data/tmp
+export TMPDIR=/glade/derecho/scratch/dettling/tmp
+mkdir -p $TMPDIR
+
+# LOAD NEEDED MODULES
+module load conda
+#conda activate /glade/campaign/ral/wsap/oracleMLSL/data/conda-envs/ral
+conda activate tf213gpu 
+export CUDNN_PATH=${CONDA_PREFIX}/lib/python3.10/site-packages/nvidia/cudnn
+export TENSORRT_PATH=${CONDA_PREFIX}/lib/python3.10/site-packages/tensorrt_libs
+export LD_LIBRARY_PATH=${CUDNN_PATH}/lib:${TENSORRT_PATH}:${CONDA_PREFIX}/lib/:${LD_LIBRARY_PATH}
+export XLA_FLAGS=--xla_gpu_cuda_data_dir=${CONDA_PREFIX}
+
+# For CUDA Aware MPI support
+export OMPI_MCA_opal_cuda_support=true
+
+# For TF optimizations, see https://github.com/NVIDIA/DeepLearningExamples/issues/57
+export TF_GPU_THREAD_MODE=gpu_private
+export TF_GPU_THREAD_COUNT=2 # 2 (default) or sometimes 4 seems a little better
+
+cd /glade/campaign/ral/wsap/oracleMLSL/mlsurfacelayer/summer_work_2024
+
+# Access command line arguments
+#python tuner_related/testtuner_obj.py "../../data/model_output/offshore_surface_layer_training_mvco.yml" "neural_network" "momentum_flux" -v 1 --project_name tuner_grid_${PBS_ARRAY_INDEX}_mf --search_type grid >& $TMPDIR/tuner_grid_out_${PBS_ARRAY_INDEX}_mf_output.txt
+
+#python tuner_related/testtuner_obj.py "../../data/model_output/offshore_surface_layer_training_mvco.yml" "neural_network" "heat_flux" -v 1 --project_name tuner_grid_${PBS_ARRAY_INDEX}_hf --search_type grid >& $TMPDIR/tuner_grid_out_${PBS_ARRAY_INDEX}_hf_output.txt
+
+python testtuner_paral.py ../config/exp_derivs_sfcVars_nn_ltd_noDir2.yml neural_network heat_flux --project_name noDir_nn_hf_bay_tuner_hector --search_type bay >& $TMPDIR/tuner_noDir_nn_hf_bay_out_test.txt
+
+#python testtuner_paral.py ../config/exp4.yml neural_network heat_flux --project_name nn_hf_grid_tuner_${PBS_ARRAY_INDEX}_hector --search_type grid >& $TMPDIR/tuner_grid_out_${PBS_ARRAY_INDEX}_hf_test.txt
+
+
+

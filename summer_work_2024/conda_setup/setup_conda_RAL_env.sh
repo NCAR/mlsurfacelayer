@@ -1,7 +1,7 @@
 #!/bin/sh
 module load conda
 
-conda_loc='../../../data/conda-envs/ral'
+conda_loc='/glade/work/$USER/conda-envs/mlsl_env'
 mkdir -p $conda_loc
 
 

@@ -1,0 +1,110 @@
+#
+#  Clone the repo 
+#
+clone git --branch hector --single-branch "https://github.com/NCAR/mlsurfacelayer.git"
+
+#
+#  Create conda env named 'mlsl_env' 
+#
+cd <git head>/mlsurfacelayer/summer_work_2024/conda_setup
+sh setup_conda_RAL_env.sh
+
+#
+# On Casper HPC: activate conda env
+#
+module load conda
+conda activate mlsl_env
+
+#
+# Install the mlsurfacelayer library that comes with the repo
+#
+cd <git head>/mlsurfacelayer
+pip install .
+
+#
+# Create derived data: 3 examples using 'process_mvco_data_qc.py -i <raw> -o <output/derived>'
+# NOTE: MOST estimates of fluxes or flux parameters are computed here
+# "raw" data ingested by Tom Brummet and passed to this project with column label format "obsName:sensorHeight_sensorHeightUnits:obsUnits"
+#
+# Derived data for MVCO
+#
+cd <git head>/mlsurfacelayer/scripts/
+python process_mvco_data_qc.py -i ../summer_work_2024/data/eastData/qced_MVCO_ocn_sonic_vaisala_QC_all_data.2004-2023.csv -o ../../data/mvco_mlsl_qc.csv
+
+#
+# Derived data for FINO
+#
+cd <git head>/mlsurfacelayer/sdcripts/
+python process_surface_data.py -s fino -i  /glade/campaign/ral/wsap/oracleMLSL/data/fino/raw/combined_2010_fino_data_30min.csv  -o /glade/campaign/ral/wsap/oracleMLSL/data/fino/derived/fino_2010_derived.csv
+
+#
+# Derived data for FLIP/RVSR/MAPS 
+#
+cd <git head>/mlsurfacelayer/scripts/
+python process_flip_data.py -i /glade/campaign/ral/wsap/oracleMLSL/data/RVSR_MAPS_FLIP.20170930-20171022.10min.csv -o /glade/campaign/ral/wsap/oracleMLSL/data/flip_mlsl.csv
+
+#
+# Model training ( No cross validation scheme) 
+#    - derived data gets created split into training, validation, testing (and holdout if relevant)
+#    - if you want to modify how data gets split see  <git head>/mlsurfacelayer/scripts/train_offshore_models_mvco.py
+#      method: load_derived_data_random_test_train_val(()
+#    - RF or ANN get trained according to configuration file in <git head>/mlsurfacelayer/config
+#    - the steps: 
+#        cd <git head>/mlsurfacelayer/config
+#        cp template.yml <experiment_name>.yml  # modify appropriately: in k-fold config set devVar = "None"
+#        cd <git head>/mlsurfacelayer/scripts
+#        python train_offshore_models_mvco.py ../config/<experiment_name>.yml 
+#        look at results:
+#           -either open a jupyter notebook and use examples there to view imodel results interactively or 
+#           -generate a few plots that will end up in the outdir listed in the config
+#            cd <git head>/mlsurfacelayer/summer_work_2024
+#            python o_mvco_model_analysis.py ../config/<experiment_name>.yml --no-average
+# eg below    
+cd <git head>/mlsurfacelayer/scripts
+python train_offshore_models_mvco.py ../config/fino_2010.yml 
+
+#
+# Model performance plots: note that all plotting code is in the model analysis notebook
+#
+cd <git head>/mlsurfacelayer/summer_work_2024
+python o_mvco_model_analysis.py ../config/fino_2010.yml --no-average  # no average means, no averaging stats across kfolds
+
+#
+# Automated k-fold cross validation
+# includes: yaml config creation for each fold, 
+#           model training and analysis for each fold, 
+#           average stats over all folds
+#       
+# Steps: create kfold yaml <exp_name>.yaml 
+#        - this will have an additional 'name' var which is the experiment name
+#        - outdir should not include the experiment. It is the output base directory
+cd outer/mlsurfacelayer/summer_work_2024
+sh run_kfold.sh <exp_name>
+
+#
+# Manual steps in k-fold corss validation:
+#   - first create <exp_name>.yaml ( make sure you add 'name' var and the outdir is the base output dir without the 'name' tail
+    cd outer/mlsurfacelayer/summer_work_2024
+    python createKfoldYaml.py ../config/<exp_name>.yml
+    cd <git head>/mlsurfacelayer/scripts
+    # repeat model build and analyze for each fold i:
+       python train_offshore_models_mvco.py ../../data/model_output/<exp_name>--kfold-<i>.yml
+       cd <git head>/mlsurfacelayer/summer_work_2024
+       # some performance viz
+       python o_mvco_model_analysis.py ../../data/model_output/template/custom_config--kfold-<i>.yml
+    # average metrics
+    average_metrics.py ../config/<exp_name>.yml 
+
+#
+# Hyperparameter tuning
+# testtuner_paral.py,  testtuner_paral_rf.py are incarnations of the parameter tuners
+# testtuner_paral.py has some documentation in it from a debugging exercise
+# They contain grid search and a bayesian tuner class
+# Check the pbs scripts starting with "jt*" to see how to run 
+# some stats scripts analyze the grid search results.
+# The idea was to compare grid search with bayesian search for limted sets of parameters
+# then when convinced the bayesian tuner performs similary to grid search, extending the 
+# parameter search ranges. We ran out of time for proper analysis 
+# In <git head>/summer_2024_work/hyperparamStatsScripts: 
+#    statsPlusInFiles*.py : the script reads and processes the results of hyperparameter tuning trials, groups them by unique hyperparameter combinations, performs statistical analysis (ANOVA) to see if different hyperparameters lead to significantly different performance, and identifies the combination that gives the best (lowest) score.
+#    anovaTukey2*.py: The code reads in neural network hyperparameter tuning results, extracts key hyperparameters, groups and analyzes them, and performs statistical tests (ANOVA and Tukey's HSD) to compare the performance of different hyperparameter combinations.  The best set of hyperparameters is compared with other sets, and the code identifies which combinations are statistically different and which are the same. The results of the Tukey test are printed, including how many sets are statistically different from the best set and how many are statistically the same.  script enhancement needed: After identifying statistically different combinations of parameters, determine the independent groups or at least be able to list the equivalent best sets of hyperparameters.

@@ -1,0 +1,35 @@
+#!/bin/bash -l
+#PBS -N hdrf 
+#PBS -A NWSA0002
+#PBS -l walltime=12:00:00
+#PBS -q casper
+#PBS -j oe
+#PBS -M dettling@ucar.edu
+#PBS -l select=1:ncpus=1:mpiprocs=1:ngpus=1:mem=100GB
+### Specify that the GPUs will be V100s
+##PBS -l gpu_type=v100
+
+
+### Set TMPDIR as recommended
+export TMPDIR=/glade/derecho/scratch/$USER/tmp
+mkdir -p $TMPDIR
+
+
+# LOAD NEEDED MODULES
+module load conda
+conda activate tf213gpu
+export CUDNN_PATH=${CONDA_PREFIX}/lib/python3.10/site-packages/nvidia/cudnn
+export TENSORRT_PATH=${CONDA_PREFIX}/lib/python3.10/site-packages/tensorrt_libs
+export LD_LIBRARY_PATH=${CUDNN_PATH}/lib:${TENSORRT_PATH}:${CONDA_PREFIX}/lib/:${LD_LIBRARY_PATH}
+export XLA_FLAGS=--xla_gpu_cuda_data_dir=${CONDA_PREFIX}
+
+# For CUDA Aware MPI support
+export OMPI_MCA_opal_cuda_support=true
+
+# For TF optimizations, see https://github.com/NVIDIA/DeepLearningExamples/issues/57
+export TF_GPU_THREAD_MODE=gpu_private
+export TF_GPU_THREAD_COUNT=2 # 2 (default) or sometimes 4 seems a little better
+
+
+/glade/campaign/ral/wsap/oracleMLSL/mlsurfacelayer/summer_work_2024/run.sh exp_heightDependent_rf_ltd  >& /glade/derecho/scratch/dettling/exp_heightDependent_rf_ltd_out.txt
+
