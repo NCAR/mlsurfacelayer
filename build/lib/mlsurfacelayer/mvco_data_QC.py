@@ -23,7 +23,7 @@ LW_QC, LW_QC, LW_QC, LW_QC, why 4 of these?
 
 '''
 
-def process_mvco_data(csv_path, out_file, nan_column="", mvco_lon=-70.544, mvco_lat=41.3435,
+def process_mvco_data(csv_path, out_file, mvco_lon=-70.544, mvco_lat=41.3435,
                         elevation=0.0, average_period=None):
     """
     This function loads all of the MVCO data and then calculates the relevant derived quantities necessary
@@ -37,11 +37,9 @@ def process_mvco_data(csv_path, out_file, nan_column="", mvco_lon=-70.544, mvco_
     Args:
         csv_path: Path to all csv files.
         out_file: Where derived data are written to.
-        nan_column: Column used to filter bad examples.
         mvco_lat: Latitude of tower site in degrees.
         mvco_lon: Longitude of tower site in degrees.
         elevation: Elevation of site in meters.
-        average_period: Window obs are averaged over.
     Returns:
         `pandas.DataFrame` containing derived data.
     """
@@ -451,6 +449,7 @@ def shift_df_list(df_list, k):
 
 def merge_dataframes(df_list):    
     # train_df = pd.concat(df_list[:-2], ignore_index=True) # Merge all but the last 2 DataFrames
+    print( "df_list len: ",  len(df_list))
     train_df = pd.concat(df_list[:-2], ignore_index=True) # Merge all but the last 2 DataFrames
     # val_df = df_list[-2] # The second to last DataFrame will be the validation set
     # test_df = df_list[-1] # The last DataFrame will be the test set
@@ -464,7 +463,7 @@ def merge_dataframes_final_model(df_list):
     test_df = pd.DataFrame() # return Test as empty because this model will be tested on the holdout set
     return train_df, val_df, test_df
 
-def load_derived_data_random_test_train_val(filename, dropna=False, filter_counter_gradient=False, devVar=None, N=10, k=0, scramble=False, holdout_ratio=None, verbose=0, config=None):
+def load_derived_data_random_test_train_val(filename, devVar=None, N=10, k=0, scramble=False, holdout_ratio=None, verbose=0, config=None):
     """
     Load derived data file, remove NaN events, and split the data into training and test sets.
 
@@ -487,58 +486,23 @@ def load_derived_data_random_test_train_val(filename, dropna=False, filter_count
     all_data = pd.read_csv(filename, index_col="Time", parse_dates=["Time"])
     all_data =  all_data[~all_data.index.duplicated(keep='first')]
     
-
-    ''' the mf in the mvco qc data has a factor of -1 applied to it. we need to first undo by applying another factor of -1. Then we will eliminate the negative values bc mf cannot be negative (the MOST computations will always result in a positive value).
-    '''
-    #pd.set_option('display.max_rows', 250)
-    #print('\n\n\nbefore\n',all_data['momentum_flux:18.4_m:m2_s-2'].head(250),'\n')
-    #all_data = all_data[all_data['momentum_flux:18.4_m:m2_s-2'].mul(-1) >= 0]
-
-    #print(all_data["momentum_flux:18.4_m:m2_s-2"].where(-all_data["momentum_flux:18.4_m:m2_s-2"] >0).head(250), '\n')
-    
-    #print('\nafter\n' ,all_data['momentum_flux:18.4_m:m2_s-2'].head(250),'\n\n\n')
-    #pd.reset_option('display.max_rows')    
-
-    # print('config lsit', config['input_columns']['momentum_flux'])
-    # print('type',   type(config['input_columns']['momentum_flux']))
-    # all_data = all_data.dropna(subset=[config['input_columns']['momentum_flux']])
     input_columns = config['input_columns']['momentum_flux'] + config['input_columns']['heat_flux'] + [config['output_columns']['momentum_flux']] + [config['output_columns']['heat_flux']]
 
-    print(f"inputs for mf:{config['input_columns']['momentum_flux']}, inputs for hf:{config['input_columns']['heat_flux']}, mf output:{config['output_columns']['momentum_flux']}, hf output:{config['output_columns']['heat_flux']}")
-    print(f'input_columns_together:{input_columns}')
-    
+    print(f"inputs for mf:\n{config['input_columns']['momentum_flux']}")
+    print(f"inputs for hf:\n{config['input_columns']['heat_flux']}")
+    print(f"mf output:\n{config['output_columns']['momentum_flux']}")
+    print(f"hf output:\n{config['output_columns']['heat_flux']}")
+    print(f'input_columns_together:\n{input_columns}')
+    percent_nans = all_data[input_columns].isna().mean() * 100
+    print( percent_nans)
     all_data = all_data.dropna(subset=input_columns)
     print("NaNs dropped successfully.")
-    # all_data = all_data.dropna(subset=[ 
-    #         "zenith:0_m:degrees", 
-    #         "azimuth:0_m:degrees", 
-    #         # "temperature:18.4_m:K", 
-    #         "water_sfc_temperature:0_m:K", 
-    #         "pressure:18.4_m:hPa", 
-    #         "potential_temperature:18.4_m:K", 
-    #         "skin_virtual_potential_temperature:0_m:K", 
-    #         # "mixing_ratio:0_m:g_kg-1", 
-    #         "mixing_ratio:18.4_m:g_kg-1", 
-    #         "relative_humidity:18.4_m:%", 
-    #         # "wave_direction:0_m:degrees", 
-    #         "wave_height:0_m:m", 
-    #         "wave_period:0_m:s", 
-    #         # "wave_phase_speed:0_m:m_s-1", 
-    #         # "wind_speed:18.4_m:m_s-1", 
-    #         # "wind_direction:18.4_m:degrees", 
-    #         "angle_between_wind_wave:0_m:degrees", 
-    #         "bulk_richardson:18.4_m:none",
-    #         "momentum_flux:18.4_m:m2_s-2",
-    #         "log_momentum_flux",
-    #         "wave_phase_speed:0_m:m_s-1",
-    #         "u_wind:18.4_m:m_s-1",
-    #         "v_wind:18.4_m:m_s-1",
-    #         "near_surf_current_u:0_m:m_s-1",
-    #         "near_surf_current_v:0_m:m_s-1",
-    #         "u_wave:0_m:m_s-1",
-    #         "v_wave:0_m:m_s-1"])
+    print( "len of df after drop: ", len(all_data.index))
 
-
+    #
+    # devVar temporal means data divided into test, train, validate, holdout 
+    # by sample datetime week
+    #
     data = dict()
 
     #
@@ -553,15 +517,13 @@ def load_derived_data_random_test_train_val(filename, dropna=False, filter_count
     if devVar == "temporal":
         testWeeks=[43, 44, 45, 46, 47, 48, 49]#29, 33, 37, 41, 45, 49]
         validateWeeks = [37, 38, 39, 40, 41, 42]
-    
-    data["test"] = all_data.loc[all_data.index.isocalendar().week.isin(testWeeks)]
-    data["validate"] = all_data.loc[all_data.index.isocalendar().week.isin(validateWeeks)]
-    data["train"] = all_data.loc[all_data.index.difference(pd.concat([pd.Series(data["test"].index), 
-                                                                        pd.Series(data["validate"].index)]))]
 
     if scramble == True:
         all_data = shuffle(all_data, random_state=42)
 
+    #
+    # hold out is fraction of dataset starting with index 0
+    #
     if holdout_ratio != None:
         # Calculate holdout set size
         holdout_size = int(len(all_data) * holdout_ratio)
@@ -573,24 +535,34 @@ def load_derived_data_random_test_train_val(filename, dropna=False, filter_count
         # Remaining Data
         all_data = all_data.iloc[holdout_size:]
 
-        # Save holdout set to CSV
-        #data["holdout"].to_csv("../../data/mvco_mlsl_holdout.csv", na_rep='?')
-
+    #
+    # If no k-fold then test, validate, train, (and holdout if specified) are returned
+    #
+    data["test"] = all_data.loc[all_data.index.isocalendar().week.isin(testWeeks)]
+    data["validate"] = all_data.loc[all_data.index.isocalendar().week.isin(validateWeeks)]
+    data["train"] = all_data.loc[all_data.index.difference(pd.concat([pd.Series(data["test"].index), 
+                                                                       pd.Series(data["validate"].index)]))]
+    #
+    # If k-fold then test, validate, train are created for indicated fold 
+    #
     if devVar == "kfold":
+        if N <= 3:
+           print("k-fold needs 3 folds minimum")
+           sys.exit()
         df_list = split_dataframe(all_data, N)              # into N smaller DataFrames
         df_list = shift_df_list(df_list, k)                 # shift df's in list to get the correct kfold
         train, validate, test = merge_dataframes(df_list)   # remerge the training and return
-        data = {'train': train, 'validate': validate, 'test': test} # create dictionary to return
+        if holdout_ratio != None:
+           holdout = data["holdout"]
+           data = {'train': train, 'validate': validate, 'test': test, 'holdout': holdout} # create dictionary to return
+        else:
+           data = {'train': train, 'validate': validate, 'test': test} 
 
-    if devVar == "kfold_final_model": # leave test set empty 
+    if devVar == "kfold_final_model": # leave test set empty (should be the holdout) 
         df_list = split_dataframe(all_data, N)              # into N smaller DataFrames
         df_list = shift_df_list(df_list, k)                 # shift df's in list to get the correct kfold
         train, validate, test = merge_dataframes_final_model(df_list)   # remerge the training and return
         data = {'train': train, 'validate': validate, 'test': test} # create dictionary to return
-
-    # train.to_csv("../hector/mvco_train_qc.csv", na_rep = '?')
-    # validate.to_csv("../hector/mvco_validate_qc.csv", na_rep = '?')
-    # test.to_csv("../hector/mvco_test_qc.csv", na_rep = '?')
 
     if devVar == 'kfold':
         print(f"data loaded, fold number: {k}")    

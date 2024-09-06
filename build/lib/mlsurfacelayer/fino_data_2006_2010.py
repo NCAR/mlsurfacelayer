@@ -3,9 +3,10 @@ from glob import glob
 from os.path import join
 from .derived import *
 from pvlib.solarposition import get_solarposition
+from mlsurfacelayer import mo
 import datetime
 
-def process_fino_2006_2010_data(csv_path, out_file, nan_column=("Value_Surface_Temperature:Buoy_m:C"), fino1_lat=54.0, fino1_lon=6.35,
+def process_fino_2006_2010_data(csv_file, out_file, nan_column=("Value_Surface_Temperature:Buoy_m:C"), fino1_lat=54.0, fino1_lon=6.35,
                         elevation=0.0, reflect_counter_gradient=False, average_period=None):
     """
     This function loads all of the FINO1 data fuke and then calculates the relevant derived quantities necessary
@@ -32,9 +33,9 @@ def process_fino_2006_2010_data(csv_path, out_file, nan_column=("Value_Surface_T
     # Read raw data
     #
     print("Reading raw data")
-    csv_file = glob(join(csv_path, "*2006_and_2010*.csv"))
+    #csv_file = glob(join(csv_path, "*2006_and_2010*.csv"))
     print (csv_file)
-    raw_data = pd.read_csv(csv_file[0], na_values=[-9999.0])
+    raw_data = pd.read_csv(csv_file, na_values=[-9999.0])
 
     #
     # Create a time series index using the time
@@ -114,8 +115,11 @@ def process_fino_2006_2010_data(csv_path, out_file, nan_column=("Value_Surface_T
                        "friction_velocity:80_m:m_s-1",
                        "friction_velocity_calc:60_m:m_s-1",
                        "friction_velocity_calc:80_m:m_s-1",
-                       "sensible_heat_flux:40_m:W_m-2", 
-                       "temperature_scale:40_m:K"
+                       "momentum_flux:40_m:m_s-1",
+                       "heat_flux:40_m:K_m_s-1", 
+                       "temperature_scale:40_m:K",
+                       "MOST_momentum_flux:40_m:m2_s-2",
+                       "MOST_heat_flux:40_m:K_m_s-1"
                        ]
 
     print( "Calculating derived variables")
@@ -271,10 +275,25 @@ def process_fino_2006_2010_data(csv_path, out_file, nan_column=("Value_Surface_T
     for height in [60,80]:                                                
         derived_data[f"friction_velocity_calc:{height:d}_m:m_s-1"]= ((raw_data[f'u_w:{height:d}_m:m/s'])**2 +  (raw_data[f'v_w:{height:d}_m:m/s'])**2 )**(.25)    
 
-   
-    derived_data["sensible_heat_flux:40_m:W_m-2"] = raw_data["Sensible Heat Flux:40_m:K_m_s-1"]
+    derived_data["momentum_flux:40_m:m2_s-2"] = derived_data["friction_velocity:40_m:m_s-1"] * derived_data["friction_velocity:40_m:m_s-1"]
+ 
+    derived_data["heat_flux:40_m:K_m_s-1"] = raw_data["Sensible Heat Flux:40_m:K_m_s-1"]
 
-    derived_data["temperature_scale:40_m:K"] = derived_data["sensible_heat_flux:40_m:W_m-2"]/derived_data["friction_velocity:40_m:m_s-1"]
+    derived_data["temperature_scale:40_m:K"] = raw_data["Sensible Heat Flux:40_m:K_m_s-1"]/derived_data["friction_velocity:40_m:m_s-1"]
+
+    #
+    # Add MOST momentum and temp flux from inputs
+    # height, Ri, skinPotT, potT, wspd, waveHt, wavePhaseSpd
+    #
+    derived_data[['MOST_momentum_flux:40_m:m2_s-2','MOST_heat_flux:40_m:K_m_s-1']]  = derived_data.apply(
+       lambda row: pd.Series(mo.computeMOSTfluxes(40,
+                                                  row['bulk_richardson:40_m:none'],
+                                                  row['skin_virtual_potential_temperature:0_m:K'],
+                                                  row['potential_temperature:40_m:K'],
+                                                  row['wind_speed:40_m:m_s-1'],
+                                                  row['wave_height:0_m:m'],
+                                                  row['wave_phase_speed:0_m:m_s-1'])), axis=1)
+
 
     #
     # Create rolling average of data columns if requested
@@ -286,7 +305,7 @@ def process_fino_2006_2010_data(csv_path, out_file, nan_column=("Value_Surface_T
     #
     # Output data
     #
-    derived_data = derived_data.dropna()
+    #derived_data = derived_data.dropna()
     derived_data.to_csv(out_file, columns=derived_columns, index_label="Time")
 
     return derived_data
@@ -380,4 +399,6 @@ def filter_counter_gradient_data(data, gradient_column="potential_temperature_gr
     filtered_indices = data[gradient_column] * data[flux_column] >= 0
     filtered_data = data.loc[filtered_indices, :]
     return filtered_data
+
+
 

@@ -3,10 +3,11 @@ from glob import glob
 from os.path import join
 from .derived import *
 from pvlib.solarposition import get_solarposition
+from mlsurfacelayer import mo
 import datetime
 
-def process_fino_data(csv_path, out_file, nan_column=("Value_Surface_Temperature:Buoy_m:C"), fino1_lat=54.0, fino1_lon=6.35,
-                        elevation=0.0, reflect_counter_gradient=False, average_period=None):
+def process_fino_data(csv_file, out_file, nan_column=("Value_Surface_Temperature:Buoy_m:C"), fino1_lat=54.0, fino1_lon=6.35,
+                        elevation=0.0 ):
     """
     This function loads all of the FINO1 data fuke and then calculates the relevant derived quantities necessary
     to build the machine learning parameterization.
@@ -23,8 +24,6 @@ def process_fino_data(csv_path, out_file, nan_column=("Value_Surface_Temperature
         fino1_lat: Latitude of tower site in degrees.
         fino1_lon: Longitude of tower site in degrees.
         elevation: Elevation of site in meters.
-        reflect_counter_gradient: Change the sign of counter gradient sensible and latent heat flux values.
-        average_period: Window obs are averaged over.
     Returns:
         `pandas.DataFrame` containing derived data.
     """
@@ -32,9 +31,9 @@ def process_fino_data(csv_path, out_file, nan_column=("Value_Surface_Temperature
     # Read raw data
     #
     print("Reading raw data")
-    csv_file = glob(join(csv_path, "*.csv"))
+    #csv_file = glob(join(csv_path, "*.csv"))
     print (csv_file)
-    raw_data = pd.read_csv(csv_file[0], na_values=[-9999.0])
+    raw_data = pd.read_csv(csv_file, na_values=[-9999.0])
 
     #
     # Create a time series index using the time
@@ -82,8 +81,8 @@ def process_fino_data(csv_path, out_file, nan_column=("Value_Surface_Temperature
                        "wave_height:0_m:m",
                        "wave_period:0_m:s",
                        "wave_phase_speed:0_m:m_s-1",
-                       #"wave_u:0_m:m_s-1",
-                       #"wave_v:0_m:m_s-1",
+                       "wave_u:0_m:m_s-1",
+                       "wave_v:0_m:m_s-1",
                        "wind_speed:40_m:m_s-1",
                        "wind_speed:60_m:m_s-1",
                        "wind_speed:80_m:m_s-1",
@@ -96,6 +95,7 @@ def process_fino_data(csv_path, out_file, nan_column=("Value_Surface_Temperature
                        "v_wind:60_m:m_s-1",
                        "u_wind:80_m:m_s-1",
                        "v_wind:80_m:m_s-1", 
+                       "angle_between_wind_wave:0_m:degrees",
                        "bulk_richardson:40_m:none",
                        "bulk_richardson:60_m:none",
                        "bulk_richardson:80_m:none",
@@ -112,8 +112,11 @@ def process_fino_data(csv_path, out_file, nan_column=("Value_Surface_Temperature
                        "friction_velocity:40_m:m_s-1",
                        "friction_velocity:60_m:m_s-1",
                        "friction_velocity:80_m:m_s-1",
-                       "kinematic_sensible_heat_flux:40_m:K_m_s-1",
-                       "temperature_scale:40_m:K"
+                       "momentum_flux:40_m:m2_s-2",
+                       "heat_flux:40_m:K_m_s-1",
+                       "temperature_scale:40_m:K",
+                       "MOST_momentum_flux:40_m:m2_s-2",
+                       "MOST_heat_flux:40_m:K_m_s-1"
                        ]
 
     print( "Calculating derived variables")
@@ -148,8 +151,8 @@ def process_fino_data(csv_path, out_file, nan_column=("Value_Surface_Temperature
     derived_data["wave_height:0_m:m"] = raw_data["Value_wave_height:Buoy:m"]
     derived_data["wave_period:0_m:s"] = raw_data["Value_wave_period_Mean:Buoy:s"]
     derived_data["wave_phase_speed:0_m:m_s-1"] = derived_data["wave_period:0_m:s"]* 9.8/(2*np.pi)
-    #derived_data["wave_u:0_m:m_s-1"] =  -derived_data["wave_phase_speed:0_m:m_s-1"] * np.sin(2* np.pi * derived_data["wave_dir:0_m:degrees"])  
-    #derived_data["wave_v:0_m:m_s-1"] =  -derived_data["wave_phase_speed:0_m:m_s-1"] * np.cos(2 * np.pi * derived_data["wave_dir:0_m:degrees"])
+    derived_data["wave_u:0_m:m_s-1"] =  -derived_data["wave_phase_speed:0_m:m_s-1"] * np.sin(2* np.pi * derived_data["wave_dir_linear_interp:0_m:degrees"])  
+    derived_data["wave_v:0_m:m_s-1"] =  -derived_data["wave_phase_speed:0_m:m_s-1"] * np.cos(2 * np.pi * derived_data["wave_dir_linear_interp:0_m:degrees"])
 
     #
     # Copy raw variables at 40,60 80m 
@@ -170,6 +173,8 @@ def process_fino_data(csv_path, out_file, nan_column=("Value_Surface_Temperature
         #
         derived_data[f"u_wind:{height:d}_m:m_s-1"], derived_data[f"v_wind:{height:d}_m:m_s-1"] = wind_components(derived_data[f"wind_speed:{height:d}_m:m_s-1"], derived_data[f"wind_direction:{height:d}_m:degrees"]) 
        
+
+    derived_data["angle_between_wind_wave:0_m:degrees"] = 180/np.pi * np.arccos((derived_data["wave_u:0_m:m_s-1"] * derived_data["u_wind:40_m:m_s-1"] + derived_data["wave_v:0_m:m_s-1"] * derived_data["v_wind:40_m:m_s-1"])/(derived_data["wave_phase_speed:0_m:m_s-1"] * derived_data["wind_speed:40_m:m_s-1"]))
 
     for height in [30,40,50,60,80]:
         #
@@ -267,21 +272,37 @@ def process_fino_data(csv_path, out_file, nan_column=("Value_Surface_Temperature
     for height in [60,80]:                                                
         derived_data[f"friction_velocity:{height:d}_m:m_s-1"]= ((raw_data[f'u_w:{height:d}_m:m2_s-2'])**2 +  (raw_data[f'v_w:{height:d}_m:m2_s-2'])**2 )**(.25)    
 
-    derived_data["kinematic_sensible_heat_flux:40_m:K_m_s-1"] = raw_data["Sensible Heat Flux:40_m:K_m_s-1"]
+    derived_data["momentum_flux:40_m:m2_s-2"] = derived_data["friction_velocity:40_m:m_s-1"] * derived_data["friction_velocity:40_m:m_s-1"]
 
-    derived_data["temperature_scale:40_m:K"] = derived_data["kinematic_sensible_heat_flux:40_m:K_m_s-1"]/derived_data["friction_velocity:40_m:m_s-1"]
+    derived_data["heat_flux:40_m:K_m_s-1"] = raw_data["Sensible Heat Flux:40_m:K_m_s-1"]
+
+    derived_data["temperature_scale:40_m:K"] = derived_data["heat_flux:40_m:K_m_s-1"]/derived_data["friction_velocity:40_m:m_s-1"]
+
+    #                  
+    # Add MOST momentum and temp flux from inputs
+    # height, Ri, skinPotT, potT, wspd, waveHt, wavePhaseSpd
+    #                  
+    derived_data[['MOST_momentum_flux:40_m:m2_s-2','MOST_heat_flux:40_m:K_m_s-1']]  = derived_data.apply(
+       lambda row: pd.Series(mo.computeMOSTfluxes(40,
+                                                  row['bulk_richardson:40_m:none'],
+                                                  row['skin_virtual_potential_temperature:0_m:K'],
+                                                  row['potential_temperature:40_m:K'],
+                                                  row['wind_speed:40_m:m_s-1'],
+                                                  row['wave_height:0_m:m'],
+                                                  row['wave_phase_speed:0_m:m_s-1'])), axis=1)
+
 
     #
     # Create rolling average of data columns if requested
     #
     if average_period is not None:
         derived_data = derived_data.rolling(window=average_period).mean()
-        derived_data = derived_data.dropna()
+        #derived_data = derived_data.dropna()
 
     #
     # Output data
     #
-    derived_data = derived_data.dropna()
+    #derived_data = derived_data.dropna()
     derived_data.to_csv(out_file, columns=derived_columns, index_label="Time")
 
     return derived_data
