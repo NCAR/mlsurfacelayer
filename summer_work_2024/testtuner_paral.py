@@ -1,6 +1,7 @@
 # import os
-# os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # or '3' to suppress all messagesimport tensorflow as tf
+#os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # or '3' to suppress all messagesimport tensorflow as tf
 from tensorflow import keras
+from itertools import product
 import keras_tuner as kt
 from sklearn.datasets import load_iris
 from sklearn.model_selection import KFold
@@ -16,6 +17,7 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 import multiprocessing as mp
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from mlsurfacelayer.metrics import mean_error, hellinger_distance, pearson_r2
+from mlsurfacelayer.models import save_random_forest_csv, save_scaler_csv
 
 from tensorflow.keras.layers import Input
 import pandas as pd
@@ -25,7 +27,11 @@ import warnings
 
 warnings.filterwarnings('ignore', message='The `lr` argument is deprecated', category=UserWarning)
 
-
+#
+# MyHyperModel class is a custom implementation for hyperparameter tuning using Keras Tuner. It allows:
+#  -Building a model with a given hyperparameter configuration.
+#  -Custom fitting logic that includes parallel cross-validation.
+#
 class MyHyperModel(kt.HyperModel):
     def __init__(self, config, args, verbose=0):
         self.config = config
@@ -53,9 +59,19 @@ class MyHyperModel(kt.HyperModel):
             print(f'Mean score across executions: {mean_score}\n')
         return {'val_loss': mean_score}
 
-# Define the model builder function
+#
+# Model builder: either random forest or neural network
+#
 def build_model(hp, config, args, verbose=0):
+    
+    #
+    # model_type = 'random_forest' or 'neural_network
+    #
     model_type = args.model_type
+   
+    #
+    # the hyperparams for the model
+    # 
     model_config = config["model_config"][model_type]
     
     if model_type == "random_forest":
@@ -66,53 +82,39 @@ def build_model(hp, config, args, verbose=0):
 
         if args.search_type == 'grid':
             model_config.update({
-                "n_estimators": args.ne,
-                # "max_depth": args.md,
-                "n_leaf_nodes": args.mf,
-                "max_features": args.mf
+                "n_estimators": args.num_estimators,
+                "max_depth": args.maximum_depth,
+                "n_leaf_nodes": args.num_leaf_nodes,
+                "max_features": args.maximum_features
             })
 
         elif args.search_type == 'bay':
             model_config.update({
                 "n_estimators": hp.Int('n_estimators', min_value=10, max_value=100, step=10),
-                # "max_depth": hp.Int('max_depth', min_value=3, max_value=10, step=1)
+                "max_depth": hp.Int('max_depth', min_value=3, max_value=10, step=1)
             })
 
         elif args.search_type == 'bay_ext':
             model_config.update({
                 "n_estimators": hp.Int('n_estimators', min_value=10, max_value=100, step=10),
-                # "max_depth": hp.Int('max_depth', min_value=3, max_value=10, step=1)
+                "max_depth": hp.Int('max_depth', min_value=3, max_value=10, step=1)
             })
-
+       
+        #
+        # Instantiate the model
+        #
         model = RandomForestRegressor(**model_config)
     
     elif model_type == "neural_network":
+        print( "model_config1: ", model_config)
         if args.verbose >= 2:
             print(f'inside build model before load')
         
-        print('data loading inside build model:')
-        data = load_derived_data_random_test_train_val(config["data_file"], dropna=True, 
-                                                    devVar=config['k_fold_cross_validation']['devVar'],
-                                                    N=config['k_fold_cross_validation']['N'],
-                                                    k=0,
-                                                    holdout_ratio=config['k_fold_cross_validation']['holdout_ratio'],
-                                                    scramble=config['k_fold_cross_validation']['scramble'],
-                                                    config=config)
-        output_type = args.predictand_type
-        input_column = config["input_columns"][output_type]
-        output_column = config["output_columns"][output_type]
-        input_scaler = StandardScaler()
-        var_scale_list = input_column + [output_column]
-        scaled_train = input_scaler.fit_transform(data["train"][var_scale_list])
-        # scaled_val = input_scaler.transform(data["validate"][var_scale_list])
-        # scaled_test = input_scaler.transform(data["test"][var_scale_list])
-
         if args.verbose >= 2: 
             model_config.update({
                 "verbose": 2
             })
 
-        
         if args.search_type == 'grid':
             model_config.update({
             "hidden_layers": args.hl,
@@ -125,29 +127,30 @@ def build_model(hp, config, args, verbose=0):
             model_config.update({
             "hidden_layers": hp.Choice('hidden_layers', values=[1, 3, 5]),
             "lr": hp.Choice('lr', values=[1e-2, 1e-3, 1e-4]),
-            "hidden_neurons": hp.Choice('hidden_neurons', values=[16, 32, 64, 128, 256]),
+            "hidden_neurons": hp.Choice('hidden_neurons', values=[16, 32, 64, 128, 256])
             })
 
         elif args.search_type == 'bay_ext':
             model_config.update({
-            "hidden_layers": hp.Choice('hidden_layers', values=[1, 3, 5]),
-            "lr": hp.Choice('lr', values=[1e-2, 1e-3, 1e-4]),
-            "hidden_neurons": hp.Choice('hidden_neurons', values=[16, 32, 64, 128, 256]),
+            "hidden_layers": hp.Choice('hidden_layers', values=[1, 2, 3, 4, 5]),
+            "lr": hp.Choice('lr', values=[1e-2, 1e-3, 1e-4, 1e-5]),
+            "hidden_neurons": hp.Choice('hidden_neurons', values=[2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048]),
             # "early_stop": hp.Choice('early_stop', values=[True, False])
             # "optimizer": hp.Choice('optimizer', values=['adam', 'sgd']),
             # "loss": hp.Choice('loss', values=['mean_squared_error', 'mean_absolute_error'])
+            "activation": hp.Choice('activation', values=['tanh', 'relu'])
             })
+ 
+        #
+        # Create a model object
+        # 
+        model = DenseNeuralNetwork(**model_config)
 
-        x, y = scaled_train[:, :-1], scaled_train[:, -1]
-        inputs = x.shape[1]
-        if len(y.shape) == 1:
-            outputs = 1
-        else:
-            outputs = y.shape[1]
-        # if self.classifier:
-        #     outputs = np.unique(y).size
-
-        model = DenseNeuralNetwork(**model_config).build_neural_network(inputs, outputs)   
+        #
+        # Build the model 
+        #
+        output_type = args.predictand_type
+        model = model.build_neural_network( inputs = len(config["input_columns"][output_type]) , outputs = 1 )   
     
     if verbose >= 2:
         print(f"Step: Build Model")
@@ -156,45 +159,65 @@ def build_model(hp, config, args, verbose=0):
     
     return model
 
+#
+# Note : max_workers not used
+#        hp passed to another method but not used in that method
+# 
 def parallel_cross_val_score(hp, config, model, args, verbose=0, max_workers=1):
+
     if args.verbose >= 2: print('Inside parallel_cross_val_score:')
     
     scores = []
 
+    #
+    # Collect scores from each cross validation fold
+    #
     for fold in range(config['k_fold_cross_validation']['N']):
         if args.verbose >= 2: print(f'Fold number:{fold} in parallel_cross_val_score')
         score = cross_val_score(hp, config, model, args, fold, verbose=verbose)
         scores.append(score)
         
-    # if args.verbose >= 2:
-    print(scores)
+    if args.verbose >= 2:
+        print("cross validation scores: ", scores)
+
     if len(scores) > 0:
-        print('\nmean of scores: ',np.mean(scores))
+        print('\nmean of cross validation scores: ',np.mean(scores))
         return np.mean(scores)
     else:
         return None  # Handle case where all folds resulted in errors
 
-# Define the cross-validation function
+
+# Perform the cross validation 
+#
+# hp:
+#
 def cross_val_score(hp, config, model, args, fold, verbose=0):
-    # model = build_model(hp, config, verbose=verbose)
+
+
+    print("loading data for fold ", fold)   
+    data = load_derived_data_random_test_train_val(config["data_file"], dropna=True, 
+                                                   devVar=config['k_fold_cross_validation']['devVar'],
+                                                   N=config['k_fold_cross_validation']['N'],
+                                                   k=fold,
+                                                   holdout_ratio=config['k_fold_cross_validation']['holdout_ratio'],
+                                                   scramble=config['k_fold_cross_validation']['scramble'],
+                                                   config=config)
+
+    #
+    # Get parameters for model traing and fitting: predictors, predictand, metric, and ml model type
+    #
     output_type = args.predictand_type
-    model_type = args.model_type
     input_column = config["input_columns"][output_type]
     output_column = config["output_columns"][output_type]
     metric = 'mean_absolute_error'
-    
-    if args.verbose >= 2:
-        print(f'inside cross val score before load')
-    print('data loading inside cross val score')
-    data = load_derived_data_random_test_train_val(config["data_file"], dropna=True, 
-                                                    devVar=config['k_fold_cross_validation']['devVar'],
-                                                    N=config['k_fold_cross_validation']['N'],
-                                                    k=fold,
-                                                    holdout_ratio=config['k_fold_cross_validation']['holdout_ratio'],
-                                                    scramble=config['k_fold_cross_validation']['scramble'],
-                                                    config=config)
+    model_type = args.model_type
 
+    #
+    # Fit the model to the training data, predict on test data,
+    # apply metric to truth and predictions
+    #
     if model_type == "random_forest":
+       
         model.fit(data["train"][input_column].values, 
                     data["train"][output_column].values)
 
@@ -202,35 +225,31 @@ def cross_val_score(hp, config, model, args, fold, verbose=0):
         score = args.metrics[metric](data["test"][output_column].values, pred)
 
     elif model_type == "neural_network":
+        #
+        # Neural network data is scaled using standard z-score
+        #
         input_scaler = StandardScaler()
+        
+        #
+        # Scale the predictor and predictand cols of data in the train, validate, and test sets
+        #
         var_scale_list = input_column + [output_column]
-        # print(data)
-        # print(data['train'])
-        # print(data['validate'])
-        # print(data['test'])
         scaled_train = input_scaler.fit_transform(data["train"][var_scale_list])
         scaled_val = input_scaler.transform(data["validate"][var_scale_list])
         scaled_test = input_scaler.transform(data["test"][var_scale_list])
-        
-        # model.fit(scaled_train[:, :-1], scaled_train[:, 0:-1], # alternative model.fit, not sure which is right
-        # model.fit(scaled_train[:, :-1], scaled_train[:, -1], 
-        #         validation_data=(scaled_val[:, :-1], scaled_val[:, -1]))
+ 
+        #
+        # Fit the model to the training data, predict 
+        #       
         model.fit(scaled_train[:, :-1], scaled_train[:, -1], scaled_val[:, :-1], scaled_val[:, -1])
-        
+        pred = model.predict(scaled_test[:, 0:-1])
 
-        # model.fit = DenseNeuralNetwork
-
-        pred = model.predict(scaled_test[:, :-1])
+        #
+        # Predictions are scaled, so unscale and apply metric to truth and predictions 
+        #
         pred = pred * input_scaler.scale_[-1] + input_scaler.mean_[-1]
-
-        if output_column == 'log_momentum_flux':
-            pred = np.exp(pred) - 1e-6
-            precision = max([len(str(x).split('.')[1]) if '.' in str(x) else 0 for x in data['test']["momentum_flux:18.4_m:m2_s-2"]]) # gets precision of measured values (2 sig figs in this case)
-            pred = np.round(pred, decimals=precision)
-
-
         score = args.metrics[metric](data["test"][output_column], pred)
-    
+
     if verbose >= 2:
         print(f"Step: Cross Validation")
         print(f"Fold: {fold}")
@@ -241,21 +260,34 @@ def cross_val_score(hp, config, model, args, fold, verbose=0):
         print(f"Score: {score}")
     
     return score
-
-# Define the hyperparameter tuning function
+#
+# Instantiate the hyperparameter tuner ( grid or bayesian)
+#
 def hyperparameter_tuning(config, args, verbose=0, type='grid', combo=None):
+
     if combo == None: 
         print(f'error combo == {combo}')
         return
     else:
+        # Descriptive project name: contains all of the hyper params: 
+        # eg. for hyper params 5 layers, 128 neurons, learning rate .001 would be  "combo__5__128__0_001__True_" 
         args.project_name = args.project_name_dir + '/combo_' + str(combo).replace('(','_').replace(')','_').replace(' ', '_').replace(',', '_').replace('.','_')
-        print('projectname: ',args.project_name)
+        print('projectname: ', args.project_name)
     
+    #
+    # Instantiate a place holder hypermodel needed for instantiating
+    # keras tuner
+    #
     hypermodel = MyHyperModel(config, args, verbose)
-    
-    strategy = None
-    # strategy = keras.distribute.experimental.CentralStorageStrategy()
 
+    #
+    # distributive processing strategy 
+    #     
+    strategy = None
+
+    #
+    # Instantiate a tuner based on 
+    #
     if type == 'grid':
         tuner = kt.tuners.GridSearch(
             hypermodel,
@@ -277,21 +309,29 @@ def hyperparameter_tuning(config, args, verbose=0, type='grid', combo=None):
             project_name=args.project_name,
             distribution_strategy=strategy
         )
-
-    # Placeholder data required by the search function, it won't be used
+    #
+    # In Keras Tuner, the search function requires some form of data to initiate the search process, 
+    # even though this data may not be used during the hyperparameter tuning. 
+    # The purpose of this placeholder data is to satisfy the function signature and allow the 
+    # tuner to go through its workflow of hyperparameter space exploration.
+    #
     dummy_data = np.zeros((1, 1))
     tuner.search_space_summary()
     tuner.search(dummy_data, dummy_data)
 
     save_trial_results(tuner, args)
 
-    # best_hps = tuner.get_best_hyperparameters(num_trials=1)[0]
-    # return best_hps
     return tuner
 
+#
+# I dont quite understand : used for grid search only (?)
+#
 def save_trial_results(tuner, args):
-    # trials = tuner.oracle.get_best_trials() # Retrieve all trials
-    trials = tuner.oracle.get_best_trials(num_trials=len(tuner.oracle.trials)) # Retrieve all trials
+    # 
+    # Retrieve all trials
+    #
+    trials = tuner.oracle.get_best_trials(num_trials=len(tuner.oracle.trials)) 
+
     if args.verbose >= 2:
         print(f"Retrieved {len(trials)} trials.")
 
@@ -302,13 +342,14 @@ def save_trial_results(tuner, args):
         trial_info = {
             "Trial ID": trial.trial_id,
             "Hyperparameters": {"hidden_layers": args.hl,"hidden_neurons": args.hn,"learning_rate": args.lr,"early_stop": args.es,},
-            # "Hyperparameters": trial.hyperparameters.values,
             "Score": trial.score,
             "Status": trial.status
         }
         trial_data.append(trial_info)
 
-
+    #
+    # Save trial info
+    #
     df = pd.DataFrame(trial_data)  # Convert to DataFrame
     if args.verbose >= 2:
         print("Converted trial data to DataFrame.")
@@ -351,18 +392,21 @@ args = parser()
 args.project_name_dir = args.project_name
 
 args.metrics = {
-    "mean_squared_error": mean_squared_error,
-    "mean_absolute_error": mean_absolute_error,
-    "pearson_r2": pearson_r2,
-    "hellinger_distance": hellinger_distance,
-    "mean_error": mean_error
+#    "mean_squared_error": mean_squared_error,
+     "mean_absolute_error": mean_absolute_error
+#    "pearson_r2": pearson_r2,
+#    "hellinger_distance": hellinger_distance,
+#    "mean_error": mean_error
 }
 
 if args.verbose >= 2:
     print(f"Arguments: {args}")
 
-with open(args.config, "r") as config_file: config = yaml.load(config_file, Loader=yaml.FullLoader) # loads in the configs from the yaml
+# loads in the configs from the yaml
+with open(args.config, "r") as config_file: 
+   config = yaml.load(config_file, Loader=yaml.FullLoader)
 
+# type: 'random_forest' or neural network
 if args.model_type is None:
     print('No model type was given. Search will be cancelled.')
     sys.exit()
@@ -379,60 +423,67 @@ if args.verbose >= 2:
 hidden_layers = [1, 3, 5]
 hidden_neurons = [16, 32, 64, 128, 256]
 lr = [0.01, 0.001, 0.0001]
+activation = ['tanh', 'relu']
 es = [True]
 
 # random forest model parameters
-num_estimators = [100, 50, 200]
-maximum_features = [10, 20, 5]
-num_jobs = [4, 2, 8]
-maximum_leaf_nodes = [1024, 516, 2048]
+# number of trees in the forest
+num_estimators: [100, 200, 500]
 
-from itertools import product
+#The number of features to consider when looking for the best split at each node. 
+#Diversity of Trees:
+#Higher Diversity: A smaller max_features value means fewer features are considered for each split, leading to more diverse trees. This diversity helps reduce overfitting and improves generalization.
+#Lower Diversity: A larger max_features value means more features are considered for each split, which can reduce the diversity among trees and potentially lead to overfitting.
+#Model Performance:
+#Accuracy: Tuning max_features can help improve the accuracy of the model. Using too few features might lead to underfitting, while using too many can lead to overfitting.
+#Bias-Variance Tradeoff: Smaller values of max_features tend to increase bias but reduce variance, leading to more stable models. Larger values tend to decrease bias but increase variance.
+#Computational Efficiency:
+#Smaller Values: Reduce the computational burden as fewer features are considered at each split, speeding up the model training.
+#Larger Values: Increase computational cost as more features are evaluated at each node split, potentially slowing down the training process.
+maximum_features: [2, 3, 5, 10 ]
 
+# max_leaf_nodes in a Random Forest model helps control the complexity of each tree in the forest, 
+# which can prevent overfitting. By limiting the maximum number of leaf nodes, you can make the individual 
+# trees simpler and more generalizable. 
+#
+maximum_leaf_nodes: [32,64, 128, 256, 516, 1024]
 
-if args.model_type == 'neural_network':
-    search_space_combinations = list(product(hidden_layers, hidden_neurons, lr, es))
-
-if args.model_type == 'random_forest':
-    search_space_combinations = list(product(num_estimators, maximum_features, num_jobs, maximum_leaf_nodes))
+#
+# for grid search, produce the set of parameter combinations
+#
+search_space_combinations = list(product(hidden_layers, hidden_neurons, lr, es, activation))
 
 # search_space_combinations = [(config, args, 0, 'grid', combo) for combo in search_space_combinations]
 print('\n\n\n search:', search_space_combinations, len(search_space_combinations))
 parallel = args.p #4
 
+print( args)
 
 def wrapper(combo):
     if args.model_type == 'neural_network':
-        args.hl, args.hn, args.lr, args.es = combo
+        args.hl, args.hn, args.lr, args.es, args.act = combo
     elif args.model_type == 'random_forest':
         args.ne, args.mf, args.nj, args.ml = combo
     
     # print(f'inside wrapper: {combo}\n{config}\n{args}')
-    print('in wrapper', args.hl, args.hn, args.lr, args.es)
+    print(f'in wrapper {args.hl}, {args.hn}, {args.lr}, {args.es}, {args.act}')
     hyperparameter_tuning(config, args, verbose=0, type='grid', combo=combo)
 
 if __name__ == '__main__':
+
     # combo=(1,16,0.01,True)
     # wrapper(combo=combo)
     # exit()
-    if args.model_type == 'random_forest':
-        if args.search_type == 'grid':
-            pass
-        elif args.search_type == 'bay':
-            pass
-        elif args.search_type == 'bay_ext':
-            pass
 
-    elif args.model_type == 'neural_network':
-        # Using multiprocessing.Pool to parallelize cross-validation
-        if args.search_type == 'grid':
-            with mp.Pool(processes=parallel) as pool:
-                # pool.starmap(wrapper, search_space_combinations)
-                pool.map(wrapper, search_space_combinations) 
-                # for combo in search_space_combinations:
-                #     pool.apply_async(wrapper, args=(combo,))
-            '''--------------------------------------------------------------'''
-        else:
-            combo = (0,0,0,0)
-            hyperparameter_tuning(config, args, verbose=0, type=args.model_type, combo=combo)
-        
+    # Using multiprocessing.Pool to parallelize cross-validation
+    if args.search_type == 'grid':
+        with mp.Pool(processes=parallel) as pool:
+            # pool.starmap(wrapper, search_space_combinations)
+            pool.map(wrapper, search_space_combinations) 
+            # for combo in search_space_combinations:
+            #     pool.apply_async(wrapper, args=(combo,))
+        '''--------------------------------------------------------------'''
+    else:
+        # combo is a dummy variable to keep the signature
+        combo = (0,0,0,0,0)
+        hyperparameter_tuning(config, args, verbose=0, type=args.model_type, combo=combo)

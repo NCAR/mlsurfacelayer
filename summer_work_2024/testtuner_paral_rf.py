@@ -6,7 +6,6 @@ python testtuner_paral_rf.py ../config/{exp_name}.yml random_forest momentum_flu
 # import os
 # os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # or '3' to suppress all messagesimport tensorflow as tf
 
-from pathlib import Path
 from tensorflow import keras
 import keras_tuner as kt
 from sklearn.datasets import load_iris
@@ -342,8 +341,8 @@ def save_trial_results(tuner, args):
 def parser():
     parser = argparse.ArgumentParser()
     parser.add_argument("config", help="Config yaml file")
-    parser.add_argument("model_type", default=None, help="Model type to be tuned")
-    parser.add_argument("predictand_type", default=None, help="Variable we want to predict in this tuner")
+    parser.add_argument("--model_type", default='random_forest', help="Model type to be tuned")
+    parser.add_argument("--predictand_type", default='momentum_flux', help="Variable we want to predict in this tuner")
     parser.add_argument("-e", "--executions_per_trial", type=int, default=1)
     parser.add_argument("-v", "--verbose", type=int, default=0, help="Verbose level for debugging")
     parser.add_argument("--directory", type=str, default="../../data/hypertuner_output")
@@ -374,7 +373,22 @@ def rfTuner(config, args, verbose, search_type, combo=None):
 
     kfoldscore = parallel_cross_val_score(hp, config, model,  args, verbose=args.verbose)
     
-    df = pd.DataFrame({'Trial ID': 0000, 'hyperparameters': {'n_estimators': args.ne, 'max_features': args.mf, 'n_jobs': args.nj, 'max_leaf_nodes': args.ml}, 'Score': kfoldscore, 'Status': 'completed_'})
+    hyperparameters = {'n_estimators': args.ne, 'max_features': args.mf, 'n_jobs': args.nj, 'max_leaf_nodes': args.ml}
+    # # df = pd.DataFrame({'Trial ID': 0000, 'hyperparameters': {'n_estimators': args.ne, 'max_features': args.mf, 'n_jobs': args.nj, 'max_leaf_nodes': args.ml}, 'Score': kfoldscore, 'Status': 'completed_'})
+    # df = pd.DataFrame({'Trial ID': 0000, 'hyperparameters': hyperparameters, 'Score': kfoldscore, 'Status': 'completed_'})
+
+    # Serialize the hyperparameters dictionary to a JSON string
+    import json
+    # hyperparameters_str = json.dumps(hyperparameters)
+    
+    # Create the DataFrame
+    df = pd.DataFrame({
+        'Trial ID': [0],
+        # 'hyperparameters': [hyperparameters_str],
+        'hyperparameters': [hyperparameters],
+        'Score': [kfoldscore],
+        'Status': ['completed_']
+    })
 
     if args.verbose >= 2: print(f'Score for current execution: {kfoldscore}')
 
@@ -386,12 +400,12 @@ def rfTuner(config, args, verbose, search_type, combo=None):
 
     # Write the DataFrame to the CSV file, appending if the file exists
     
-    Path(output_path).mkdir(parents=True, exist_ok=True)
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
     df.to_csv(output_path, mode='a', header=not file_exists, index=False)
 
     output_path = f'{args.directory}/{args.project_name}/../trial_results_.csv'
     
-    Path(output_path).mkdir(parents=True, exist_ok=True)
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
     df.to_csv(output_path, mode='a', header=False, index=False)
     
     if args.verbose >= 2:
@@ -428,7 +442,7 @@ elif args.predictand_type is None:
     print('No predictand type was given. Search will be cancelled.')
     sys.exit()
 
-if args.verbose >= 2:
+if args.verbose >= 1:
     print(f"Starting hyperparameter tuning with model type: {args.model_type} and predictand type: {args.predictand_type}")
 
 '''--------------------------------------------------------------'''
@@ -439,10 +453,15 @@ lr = [0.01, 0.001, 0.0001]
 es = [True]
 
 # random forest model parameters
-num_estimators = [100, 50, 200]
-maximum_features = [10, 20, 5]
+num_estimators = [50, 100, 200] #[100, 50, 200]
+maximum_features = [5, 10, 20] #[10, 20, 5]
 num_jobs = [4]
-maximum_leaf_nodes = [1024, 516, 2048]
+maximum_leaf_nodes = [512, 1024, 2048] #[1024, 516, 2048]
+
+num_estimators = [100, 200, 500] #[100, 50, 200]
+maximum_features = [2, 3, 5, 10] #[10, 20, 5]
+num_jobs = [2]
+maximum_leaf_nodes = [32, 64, 128, 256, 516, 1024] #[1024, 516, 2048]
 
 
 if args.model_type == 'neural_network':

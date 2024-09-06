@@ -1,22 +1,18 @@
 import pandas as pd
 import numpy as np
-# import matplotlib as plt
 import matplotlib.pyplot as plt
-
 from scipy.stats import gaussian_kde
-
 import plotly
 import chart_studio.plotly as py
 from plotly.graph_objs import Scatter, Layout
 import plotly.graph_objs as go
 from  plotly.graph_objs import *
-
 import os
-
 from pathlib import Path
-
 import argparse
 import yaml
+
+
 
 def draw_loss(cut, direc, show=False, save=True, save_path=None):
     if save_path==None: 
@@ -41,21 +37,14 @@ def draw_loss(cut, direc, show=False, save=True, save_path=None):
 
     fig.tight_layout()
     if show: plt.show()
-    if save: plt.savefig(f'{save_path}/loss{cut}.eps', format='eps')
     if save: plt.savefig(f'{save_path}/loss{cut}.png', format='png')
     plt.close()
     print("\nfinished loss")
 
-def draw_mf(df, show=False, save=True, save_path=None):
+def draw_mf(df, config, show=False, save=True, save_path=None):
     pred1 = 'momentum_flux'
-    ex_pred1 = "momentum_flux:18.4_m:m2_s-2"
-
-    pred2 = 'heat_flux'
-    ex_pred2 = 'heat_flux:18.4_m:degrees_C_m_s-1' # degrees celsius , meters per second
-    
+    ex_pred1 = config['output_columns']['momentum_flux']
     mo_version = 'MOST_'
-
-
 
     if save_path==None: 
         print('Error, save_path is None, cannot save files') 
@@ -70,21 +59,13 @@ def draw_mf(df, show=False, save=True, save_path=None):
     #
     xStr = ex_pred1
     yStr = []
-
     yStr.append(pred1 + '-neural_network')
     yStr.append(pred1 + '-random_forest')
-    
     yStr.append(mo_version + ex_pred1)
-    yStr.append('MOST_chopped_' + ex_pred1)
-    yStr.append('MOST_rounded_' + ex_pred1)
-    #yStr.append(predictand1+ mo_version2)
 
-    # df2 =  df.loc[df[mo_version + ex_pred1].isna() == False]
     df2 = df[df[mo_version + ex_pred1].notna()]
 
-    #df2 =  df.loc[df[predictand1 + mo_version2].isna() == False]
-
-    fig, ax = plt.subplots(3,2, figsize = (20,20))
+    fig, ax = plt.subplots(1,3, figsize = (20,5))
     ax = ax.flat
     for i in range (0,len(ax)):
         if i >= len(yStr): continue
@@ -99,7 +80,7 @@ def draw_mf(df, show=False, save=True, save_path=None):
         ax[i].set_xlim(0,1)
         ax[i].set_ylim(0,1)
         fig.colorbar(im, ax = ax[i])
-        titleStr = "y = {0} x = measured {1}". format(yStr[i], xStr)
+        titleStr = "x = measured {0} \n y = {1}\n". format(xStr,yStr[i])
         ax[i].set_title(titleStr )
         m, b = np.polyfit(x, y, 1)
         ax[i].plot(x, x)
@@ -111,22 +92,16 @@ def draw_mf(df, show=False, save=True, save_path=None):
     
     fig.tight_layout()
     if show: plt.show()
-    if save: plt.savefig(save_path + '/mf_scatter.eps', format='eps')
     if save: plt.savefig(save_path + '/mf_scatter.png', format='png')
 
     plt.close()
     print("\nfinished mf")
 
-def draw_hf(df, show=False, save=True, save_path=None):
-    pred1 = 'momentum_flux'
-    ex_pred1 = "momentum_flux:18.4_m:m2_s-2"
-
+def draw_hf(df, config, show=False, save=True, save_path=None):
     pred2 = 'heat_flux'
-    ex_pred2 = 'heat_flux:18.4_m:degrees_C_m_s-1' # degrees celsius , meters per second
-    
+    ex_pred2 = config['output_columns']['heat_flux']
+
     mo_version = 'MOST_'
-
-
 
     if save_path==None: 
         print('Error, save_path is None, cannot save files') 
@@ -147,17 +122,10 @@ def draw_hf(df, show=False, save=True, save_path=None):
     yStr.append(pred2+ '-random_forest')
     
     yStr.append(mo_version + ex_pred2.replace('C','K'))
-    yStr.append('MOST_chopped_' + ex_pred2.replace('C','K'))
-    yStr.append('MOST_rounded_' + ex_pred2.replace('C','K'))
-    #yStr.append(predictand2+ mo_version2)
 
-    # df2 = df.loc[df[mo_version + ex_pred2.replace('C','K')].isna() == False]
     df2 = df[df[mo_version + ex_pred2.replace('C','K')].notna()]
 
-    #df2 = df.loc[df[predictand2+ mo_version2].isna() == False]
-
-    # fig, ax = plt.subplots(2,2, figsize = (20,20))
-    fig, ax = plt.subplots(3,2, figsize = (20,20))
+    fig, ax = plt.subplots(1,3, figsize = (20,5))
     ax = ax.flat
     for i in range (0,len(ax)):
         if i >= len(yStr): continue
@@ -170,23 +138,16 @@ def draw_hf(df, show=False, save=True, save_path=None):
  
         im = ax[i].scatter(x,y,  c=z, cmap = 'plasma')
     
-        # ax[i].set_xlim(-.25,.25)
-        # ax[i].set_ylim(-.25,.25)
-        ax[i].set_xlim(-.5,.5)
-        ax[i].set_ylim(-.5,.5)
-        # ax[i].set_xlim(-1,1)
-        # ax[i].set_ylim(-1,1)
-        # ax[i].set_xlim(-1000,1000)
-        # ax[i].set_ylim(-1000,1000)
+        #ax[i].set_xlim(-.2,.2)
+        #ax[i].set_ylim(-.2,.2)
         
         fig.colorbar(im, ax = ax[i])
-        titleStr = "x = measured {0}, y = {1}". format(xStr, yStr[i])
+        titleStr = "x = measured {0}\n y = {1}". format(xStr, yStr[i])
         ax[i].set_title(titleStr )
         ax[i].plot(x, x)
      
     fig.tight_layout()
     if show: plt.show()
-    if save: plt.savefig(save_path + '/hf_scatter.eps', format='eps')
     if save: plt.savefig(save_path + '/hf_scatter.png', format='png')
 
     plt.close()
@@ -227,10 +188,6 @@ def draw_group_time_series(df,ex_pred,pred, show=False, save=True, save_path=Non
         (df, ex_pred, pred, 'neural_network', 'purple'),
         (df, ex_pred, pred, 'random_forest', 'red'),
         (df, ex_pred, pred, 'MOST_', 'green'),
-        (df, ex_pred, pred, 'MOST_chopped_', 'orange'),
-        (df, ex_pred, pred, 'MOST_chopped_', 'blue')
-        #(df, ex_pred, pred, 'mo_branko', 'green'),
-        #(df, ex_pred, pred, 'mo_alternate', 'brown'),
     ]
 
     fig, axs = plt.subplots(2,2, figsize=(20,20))
@@ -241,7 +198,6 @@ def draw_group_time_series(df,ex_pred,pred, show=False, save=True, save_path=Non
 
     fig.tight_layout()
     if show: plt.show()
-    if save: plt.savefig(f'{save_path}/time_series_{pred}.eps', format='eps')
     if save: plt.savefig(f'{save_path}/time_series_{pred}.png', format='png')
 
     plt.close()
@@ -280,8 +236,11 @@ def plot_feature_importance(directory, model_name, regime=None, sort=False, show
     ax.legend(loc='upper right', fontsize='small')
 
     if show: plt.show()
-    if save: plt.savefig(f'{save_path}/{title}_{sort}.eps', format='eps', bbox_inches='tight')
-    if save: plt.savefig(f'{save_path}/{title}_{sort}.png', format='png', bbox_inches='tight')
+    if sort:
+       sortStr = "sorted"
+    else:
+       sortStr = "unsorted"
+    if save: plt.savefig(f'{save_path}/{title}_{sortStr}.png', format='png', bbox_inches='tight')
     plt.close()
 
 def average_importances(directory, model_name, sort=False, show=False, save=True, save_path=None):
@@ -325,11 +284,18 @@ def average_importances(directory, model_name, sort=False, show=False, save=True
     if show: plt.show()
 
     # base_directory = directory.replace(f"/model_QC_--kfold-{}", "")
-    if save: plt.savefig(f'{save_path}/{title}_{sort}.eps', format='eps', bbox_inches='tight')
-    if save: plt.savefig(f'{save_path}/{title}_{sort}.png', format='png', bbox_inches='tight')
+    if sort:
+       sortStr = "sorted"
+    else:
+       sortStr = "unsorted"
+    if save: plt.savefig(f'{save_path}/{title}_{sortStr}.png', format='png', bbox_inches='tight')
     plt.close()
 
-def parser():
+
+if __name__ == "__main__":
+    #
+    # Parse program args:  config file path 
+    #
     parser = argparse.ArgumentParser()
     parser.add_argument("config", help="Config yaml file")
     #parser.add_argument("--save_file", help="Where to save the graphics")
@@ -347,15 +313,6 @@ def parser():
     parser.add_argument("-v", type=int, default=0)
     #parser.add_argument("--exp_name", type=str, default='model')
     args = parser.parse_args()
-    
-    return args
-
-if __name__ == "__main__":
-    #
-    # Parse program args:  config file path 
-    #
-    args = parser()
-    
     with open(args.config, "r") as config_file:
         config = yaml.load(config_file,Loader=yaml.FullLoader)
     
@@ -363,15 +320,14 @@ if __name__ == "__main__":
     args.save_file = directory
     
     # model options below ---------------------------------------------------
+    
     pred1 = 'momentum_flux'
-    ex_pred1 = "momentum_flux:18.4_m:m2_s-2"
+    ex_pred1 = config['output_columns']['momentum_flux']
 
     pred2 = 'heat_flux'
-    ex_pred2 = 'heat_flux:18.4_m:degrees_C_m_s-1' # degrees celsius , meters per second
+    ex_pred2 = config['output_columns']['heat_flux'] 
     
     mo_version = 'MOST_'
-    #mo_version = '-mo_branko'
-    #mo_version2 = '-mo_alternate'
 
     num_folds = config['k_fold_cross_validation']['N']
     # model options above ---------------------------------------------------
@@ -418,8 +374,8 @@ if __name__ == "__main__":
         average_importances(base_directory, f"{pred2}_random_forest", sort=sort, show=args.show, save=args.save, save_path=base_directory)
         print("Averaged Feature Importances unsorted created successfully.")
         
-        draw_hf(combined_df, show=args.show, save=args.save, save_path=base_directory)
-        draw_mf(combined_df, show=args.show, save=args.save, save_path=base_directory)
+        draw_hf(combined_df, config,show=args.show, save=args.save, save_path=base_directory)
+        draw_mf(combined_df, config,show=args.show, save=args.save, save_path=base_directory)
         print("Combined DataFrame created successfully.")
 
     else:
@@ -447,8 +403,9 @@ if __name__ == "__main__":
 
         draw_loss(0, directory, show=args.show, save=args.save, save_path=directory)
         draw_loss(20, directory, show=args.show, save=args.save, save_path=directory)
-        draw_hf(pred, show=args.show, save=args.save, save_path=directory)
-        draw_mf(pred, show=args.show, save=args.save, save_path=directory)
-        draw_group_time_series(pred, ex_pred1, pred1, show=args.show, save=args.save, save_path=directory)
-        draw_group_time_series(pred, ex_pred2, pred2, show=args.show, save=args.save, save_path=directory)
+        draw_hf(pred, config, show=args.show, save=args.save, save_path=directory)
+        draw_mf(pred, config, show=args.show, save=args.save, save_path=directory)
+        # non interactive times series below are not helpful
+        #draw_group_time_series(pred, ex_pred1, pred1, show=args.show, save=args.save, save_path=directory)
+        #draw_group_time_series(pred, ex_pred2, pred2, show=args.show, save=args.save, save_path=directory)
         print("\nfinished drawing\n")
