@@ -42,8 +42,6 @@ def main():
     with open(args.config, "r") as config_file:
         config = yaml.load(config_file,Loader=yaml.FullLoader)
 
-    
-
     #
     # Training data
     #
@@ -94,14 +92,6 @@ def main():
     stability_column = config["stability_column"]
 
     #
-    # Not sure what this is
-    # 
-    if "filter_counter_gradient" in config.keys():
-        filter_counter_gradient = config["filter_counter_gradient"]
-    else:
-        filter_counter_gradient = False
-
-    #
     # Create the output directory for models and results if needed
     #
     if not exists(out_dir):
@@ -111,31 +101,25 @@ def main():
     # Test and train data loaded.
     # Testing data specified by randomly chosen week within each month of data
     #
-    # data = load_derived_data_random_test_train_val(data_file, dropna=True, filter_counter_gradient=filter_counter_gradient)
-    data = load_derived_data_random_test_train_val(data_file, dropna=True, 
-                                                    filter_counter_gradient=filter_counter_gradient,
-                                                    devVar=config['k_fold_cross_validation']['devVar'],
-                                                    N=config['k_fold_cross_validation']['N'],
-                                                    k=config['k_fold_cross_validation']['k'],
-                                                    holdout_ratio=config['k_fold_cross_validation']['holdout_ratio'],
-                                                    scramble=config['k_fold_cross_validation']['scramble'],
-                                                    config=config)#,
+    data = load_derived_data_random_test_train_val(data_file, 
+                                                   devVar=config['k_fold_cross_validation']['devVar'],
+                                                   N=config['k_fold_cross_validation']['N'],
+                                                   k=config['k_fold_cross_validation']['k'],
+                                                   holdout_ratio=config['k_fold_cross_validation']['holdout_ratio'],
+                                                   scramble=config['k_fold_cross_validation']['scramble'],
+                                                   config=config)#,
+    #
+    # Output the train, validate, test, holdout sets
+    #
     for a in data:
-    #    #data[a]['momentum_flux:18.4_m:m2_s-2'] = data[a]['momentum_flux:18.4_m:m2_s-2'].replace(-0.0, 0)
         data[a].to_csv(join(out_dir, f'data_from_{a}_split.csv'), index_label='Time')
-    #drop_nan=config['input_columns'][0]) # this 0 is assuming the mf & hf models have the same input
-
-    # tempdf = data['test']
-    # data['test'] = data['validate']
-    # data['validate'] = tempdf
-
-    #model_objects = dict()
 
     #
     # Create a data frame for the predictions and the derived or predictor variables
     # to be included with the predictions. Output will be in surface_layer_model_predictions.csv 
     #
     pred_columns = []
+    # from yaml config sample output_types: ['momentum_flux', 'heat_flux']
     for output_type in output_types:
         #
         # Predictand names will be "<modelName>-<predictand>"
@@ -144,10 +128,8 @@ def main():
             pred_columns.append(output_type + "-" + model_name)
         
         #
-        # Predictands will also be compute using Monin Obukhov Similarity Theory
+        # Predictands computed using Monin Obukhov Similarity Theory
         #
-        # pred_columns.append(output_type + "-" + "mo_branko")
-        # pred_columns.append(output_type + "-" + "mo_alternate")
         pred_columns.append(output_type + "-" + "mo")
 
     #
@@ -169,9 +151,8 @@ def main():
     model_predictions.loc[:, derived_columns] = tempvar
 
     #
-    # Create a data frame with predictands as index and columns
-    # with metric label. Data frame will contain average error using
-    # each predictive or estimation method
+    # Create a data frame with predictands as index and columns with metric label. 
+    # Data frame will contain average error using each predictive or estimation method
     #
     model_metrics = pd.DataFrame(0, index=pred_columns, columns=model_metric_types,
                                  dtype=np.float32)
@@ -181,22 +162,19 @@ def main():
     with open(out_dir + '/config_info.yml', 'w') as file:
         yaml.dump(config, file) 
 
-     
+    #
     # Compute the error in the MOST estimations of the predictands 
+    # MOST estimates are computed along with other derived data values in mlsurfacelayer lib files 
     # and fill in the model_metrics dataframe with the results
-    # MOST estimations were calculated during data ingest and included
-    # as unused columns in the training data and have an expected label
-    # which is visable a few lines down.
-    # note the replace('C','K').  some flux units are in Celsius and some Kelvin
-    # MVCO was Celcius. 
-    # 
+    # from yaml config sample output_types: ['momentum_flux', 'heat_flux']
     for output_type in output_types:
-        # Get the predictand label used in the model_metrics dataframe
+        # Get the predictand label defined above which is used in the model_metrics dataframe
         mo_predictand_label = output_type + "-" + "mo"
 
         # Compute the different error metrics for each mo estimated predictand 
         for model_metric in model_metric_types:
             # Ensure there are no NaNs in your predictions
+            # (If heat flux has units in degrees C, replace with degrees K)
             valid_indices = ~np.isnan(data["test"][output_columns[output_type]].values) & ~np.isnan(data['test']['MOST_' + output_columns[output_type].replace('C','K')].values)
             
             # Execute the metric function and for this mo index label and metric column
@@ -204,9 +182,8 @@ def main():
             model_metrics.loc[mo_predictand_label,model_metric] = metrics[model_metric](data["test"][output_columns[output_type]].values[valid_indices], data['test']['MOST_' + output_columns[output_type].replace('C','K')].values[valid_indices])
 
 
-
     #
-    # Create models 
+    # Create ML models 
     #
     model_objects = dict()
 
@@ -223,8 +200,6 @@ def main():
     #
     # for each prediction problem/label or predictand
     #
-    # print("mo_branko friction vel", model_predictions['friction_velocity-mo_branko'])
-    # print("mo_alternate friction vel", model_predictions['friction_velocity-mo_alternate'])
     print(model_predictions.columns)
 
     for output_type in output_types:
@@ -238,28 +213,17 @@ def main():
         #
         # Copy the test truth data for this predictand to the model_predictions data frame
         #
-        # print('outcol outtype', output_columns[output_type])
-        # print('len of data', len(data["test"][output_columns[output_type]]))
-        # print('len of model pred', len(model_predictions.loc[:, output_columns[output_type]]))
-        
-
-        '''these 3 lines below did not work, it ended up deleting the origianl dataframe'''
-        # if output_columns[output_type] == 'log_momentum_flux':
-        #     model_predictions['test_assignment'] = data["test"][output_columns[output_type]]
-        #     print("Assignment successful")
-        # else:
         model_predictions.loc[:, output_columns[output_type]] = data["test"][output_columns[output_type]]
         
         #
         # Data normalizer
         #
         input_scalers[output_type] = StandardScaler()
-
         
         importances[output_type] = {}
 
         #
-        # Scale training data for ANN using the normalizer (predictors and predictand)
+        # Scale training and validation data for ANN using the normalizer (predictors and predictand)
         #
         var_scale_list = input_columns[output_type] + [output_columns[output_type]]
 
@@ -267,7 +231,6 @@ def main():
         scaled_train  = input_scalers[output_type].fit_transform( data["train"][var_scale_list])
         scaled_val  = input_scalers[output_type].transform( data["validate"][var_scale_list])
         
-
         #
         # Scale the test data predictors
         #
@@ -285,13 +248,12 @@ def main():
             print("Training", output_type, model_name)
             
             #
-            # Instantiate the models with the specified parameter isn the config file
+            # Instantiate the models with the specified parameter in the config file
             #
             model_objects[model_name][output_type] = model_classes[model_name](**model_config)
 
             print("The predictors ", input_columns[output_type])
             print("Training data shape: ",data["train"][input_columns[output_type]].shape)
-
 
             #
             # Train the random forest on non-normalized data
@@ -323,10 +285,11 @@ def main():
                 #
                 model_predictions.loc[:, predictandLabel_model] = model_objects[model_name][output_type].predict(data["test"][input_columns[output_type]])
                 print(" random forest prediction min", predictandLabel_model, ": ", model_predictions.loc[:, predictandLabel_model].min())
+
                 #
-                # Compute feature importances for neutral regime
+                # Compute feature importances for all stability regimes
                 #
-                print("Computing RF predictor importance tests for stability regimes")
+                print("Computing RF predictor importance tests for all stability regimes")
                 importances[output_type][model_name] = feature_importance(
                     data["train"][input_columns[output_type]].values,
                     data["train"][output_columns[output_type]].values,
@@ -460,15 +423,6 @@ def main():
                 
                 model_predictions[predictandLabel_model] = model_predictions[predictandLabel_model]  * input_scalers[output_type].scale_[len(input_scalers[output_type].scale_) - 1 ] + input_scalers[output_type].mean_[len(input_scalers[output_type].mean_) - 1 ]
                 
-                if output_columns[output_type] == 'log_momentum_flux':
-                    # derived_data['exp_momentum_flux'] = np.exp(derived_data["log_momentum_flux"]) - 1e-6
-                    # precision = max([len(str(x).split('.')[1]) if '.' in str(x) else 0 for x in derived_data["momentum_flux:18.4_m:m2_s-2"]]) # gets precision of measured values (2 sig figs in this case)
-                    # derived_data['exp_momentum_flux'] = np.round(derived_data['exp_momentum_flux'], decimals=precision)
-                    
-                    model_predictions[predictandLabel_model] = np.exp(model_predictions[predictandLabel_model]) - 1e-6
-                    precision = max([len(str(x).split('.')[1]) if '.' in str(x) else 0 for x in derived_columns["momentum_flux:18.4_m:m2_s-2"]]) # gets precision of measured values (2 sig figs in this case)
-                    model_predictions[predictandLabel_model] = np.round(model_predictions[predictandLabel_model], decimals=precision)
-
             #
             # Compute error metrics
             #

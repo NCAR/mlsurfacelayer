@@ -1,2 +1,4 @@
 #./process_surface_data.py -s fino -i /d1/FINO1/data -o /d1/mlsurfacelayer/data/fino/derived/fino_derived.csv
-./process_surface_data.py -s fino_2006_2010 -i /d1/FINO1/data -o /d1/mlsurfacelayer/data/fino_2006_2010/derived/fino_2006_2010_derived.csv
+#./process_surface_data.py -s fino_2006_2010 -i /d1/FINO1/data -o /d1/mlsurfacelayer/data/fino_2006_2010/derived/fino_2006_2010_derived.csv
+./process_surface_data.py -s fino_2006_2010 -i /glade/campaign/ral/wsap/oracleMLSL/data/fino/raw/combined_2006_and_2010_data.csv -o /glade/campaign/ral/wsap/oracleMLSL/data/fino/derived/fino_2006_2010_derived.csv
+./process_surface_data.py -s fino -i  /glade/campaign/ral/wsap/oracleMLSL/data/fino/raw/combined_2010_fino_data_30min.csv  -o /glade/campaign/ral/wsap/oracleMLSL/data/fino/derived/fino_2010_derived.csv
